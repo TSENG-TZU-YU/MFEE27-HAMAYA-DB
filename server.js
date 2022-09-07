@@ -3,6 +3,9 @@ require('dotenv').config();
 const app = express();
 const port = process.env.SERVER_PORT;
 const pool = require('./utils/db.js');
+const cors = require('cors');
+
+app.use(cors());
 
 app.get('/api', (req, res, next) => {
   console.log('這裡是首頁');
