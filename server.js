@@ -7,8 +7,6 @@ const pool = require('./utils/db.js');
 const cors = require('cors');
 app.use(cors());
 
-let classAdult = require('./routers/class/classAdult');
-app.use(classAdult);
 
 let authRouter = require('./routers/auth');
 app.use(authRouter);
