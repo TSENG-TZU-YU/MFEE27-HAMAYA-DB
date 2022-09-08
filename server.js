@@ -10,6 +10,9 @@ app.use(cors());
 let classAdult = require('./routers/class/classAdult');
 app.use(classAdult);
 
+let products = require('./routers/products');
+app.use(products);
+
 app.get('/api', (req, res, next) => {
     console.log('這裡是首頁');
     res.send('Hello Express');
