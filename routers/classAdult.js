@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
-const pool = require('../../utils/db');
+const pool = require('../utils/db');
 
 // http://localhost:3001/class/list/Adult
 router.get('/class/list/Adult', async (req, res, next) => {
