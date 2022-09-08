@@ -7,11 +7,8 @@ const pool = require('./utils/db.js');
 const cors = require('cors');
 app.use(cors());
 
-let classAdult = require('./routers/class/classAdult');
-app.use(classAdult);
-
 let authRouter = require('./routers/auth');
-app.use(authRouter);
+app.use('/api/auth',authRouter);
 
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
@@ -30,12 +27,6 @@ app.use('/api/place', placeRouter);
 
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
-
-
-app.get('/api', (req, res, next) => {
-    console.log('這裡是首頁');
-    res.send('Hello Express');
-});
 
 app.use((req, res, next) => {
     console.log('在所有路由中間件的下面 -> 404 了！');
