@@ -6,9 +6,10 @@ const pool = require('./utils/db.js');
 
 const cors = require('cors');
 app.use(cors());
+app.use(express.json());
 
 let authRouter = require('./routers/auth');
-app.use('/api/auth',authRouter);
+app.use('/api/auth', authRouter);
 
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
