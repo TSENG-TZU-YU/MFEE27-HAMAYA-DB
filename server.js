@@ -6,9 +6,13 @@ const pool = require('./utils/db.js');
 
 const cors = require('cors');
 app.use(cors());
+<<<<<<< HEAD
+=======
+app.use(express.json());
+>>>>>>> b44782a62125569c9c12b437f285e7210852f24d
 
 let authRouter = require('./routers/auth');
-app.use(authRouter);
+app.use('/api/auth', authRouter);
 
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
@@ -28,6 +32,7 @@ app.use('/api/place', placeRouter);
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
 
+<<<<<<< HEAD
 let products = require('./routers/products');
 app.use(products);
 
@@ -36,6 +41,8 @@ app.get('/api', (req, res, next) => {
   res.send('Hello Express');
 });
 
+=======
+>>>>>>> b44782a62125569c9c12b437f285e7210852f24d
 app.use((req, res, next) => {
   console.log('在所有路由中間件的下面 -> 404 了！');
   res.status(404).send('Not Found!!');
