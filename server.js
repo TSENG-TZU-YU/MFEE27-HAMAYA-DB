@@ -3,13 +3,42 @@ require('dotenv').config();
 const app = express();
 const port = process.env.SERVER_PORT;
 const pool = require('./utils/db.js');
+const path = require('path');
 
 const cors = require('cors');
-app.use(cors());
+const corsOptions = {
+    // 如果要讓 cookie 可以跨網域存取，這邊要設定 credentials
+    // 且 origin 也要設定
+    credentials: true,
+    origin: ['http://localhost:3000'],
+};
+app.use(cors(corsOptions));
+
+// 啟用 session
+const expressSession = require('express-session');
+// 把 session 存在硬碟中
+var FileStore = require('session-file-store')(expressSession);
+app.use(
+    expressSession({
+        store: new FileStore({
+            // session 儲存的路徑
+            path: path.join(__dirname, '..', 'sessions'),
+        }),
+        secret: process.env.SESSION_SECRET,
+        // 如果 session 沒有改變的話，要不要重新儲存一次？
+        resave: false,
+        // 還沒初始化的，要不要存
+        saveUninitialized: false,
+    })
+);
+
 app.use(express.json());
 
 let authRouter = require('./routers/auth');
 app.use('/api/auth', authRouter);
+
+let membrtRouter = require('./routers/member');
+app.use('/api/member', membrtRouter);
 
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
