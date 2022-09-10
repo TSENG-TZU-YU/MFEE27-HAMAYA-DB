@@ -141,14 +141,20 @@ router.post('/login', async (req, res, next) => {
     // 密碼比對成功 -> 存在 session
     let saveMember = {
         id: member.id,
-        name: member.name,
+        fullName: member.name,
         email: member.email,
+        phone: member.phone,
+        birthday: member.birthday,
+        address: member.address,
         photo: member.photo,
+        sub: member.sub,
+        password: '********',
+        repassword: '',
         loginDt: new Date().toISOString(),
     };
     // 把資料寫進 session 裡
     req.session.member = saveMember;
-    console.log(req.session)
+    console.log(req.session);
     // // 回覆前端登入成功
     res.json(saveMember);
     // res.json({ message: 'TESTOK' });
@@ -156,7 +162,7 @@ router.post('/login', async (req, res, next) => {
 
 router.get('/logout', (req, res, next) => {
     req.session.member = null;
-    res.json({ message: '登出成功' });
+    res.json({ message: '已登出' });
 });
 
 module.exports = router;
