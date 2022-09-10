@@ -37,6 +37,9 @@ app.use(express.json());
 let authRouter = require('./routers/auth');
 app.use('/api/auth', authRouter);
 
+let membrtRouter = require('./routers/member');
+app.use('/api/member', membrtRouter);
+
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
 
