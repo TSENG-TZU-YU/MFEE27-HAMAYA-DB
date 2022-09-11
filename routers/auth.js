@@ -88,7 +88,8 @@ router.get('/', (req, res, next) => {
 
 //註冊
 // /api/auth/register
-router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
+// router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
+router.post('/register', registerRules, async (req, res, next) => {
     // TODO: 要用 try-catch 把 await 程式包起來
 
     // 確認資料有沒有收到
@@ -238,14 +239,12 @@ router.put('/password', async (req, res, next) => {
 
 //修改相片
 // /api/auth/photo
-router.get('/photo', (req, res, next) => {
-    console.log('check Login');
-    console.log(req.session.member);
-    if (!req.session.member) {
-        return res.status(401).json({ message: '尚未登入' });
-    }
-    console.log(req.session);
-    res.json(req.session.member);
+router.post('/photo', uploader.single('photo'), async (req, res, next) => {
+    console.log('uploader photo');
+    console.log(req.file);
+    let filename = req.file ? '/uploads/' + req.file.filename : '';
+    await pool.execute('UPDATE users SET photo=? WHERE id=?', [filename, req.session.member.id]);
+    res.json({ message: '新增照片成功' });
 });
 
 module.exports = router;
