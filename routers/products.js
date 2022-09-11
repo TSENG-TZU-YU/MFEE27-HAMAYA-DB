@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     // 每一頁拿24筆資料
     const perPage = 24;
     // 取得總筆數
-    let [total] = await pool.execute('SELECT COUNT(*) AS total FROM product');
+    let [total] = await pool.execute('SELECT COUNT(*) AS total FROM product WHERE valid = 1');
     total = total[0].total;
     // 計算總頁數 Math.ceil
     let lastPage = Math.ceil(total / perPage);
@@ -20,10 +20,10 @@ router.get('/', async (req, res) => {
     const offset = perPage * (page - 1);
 
     // 所有商品
-    let [data] = await pool.execute(`SELECT * FROM product JOIN product_img ON product_img.product_id  = product.product_id ORDER BY product.create_time LIMIT ? OFFSET ?`, [
-        perPage,
-        offset,
-    ]);
+    let [data] = await pool.execute(
+        `SELECT * FROM product JOIN product_img ON product_img.product_id  = product.product_id WHERE valid = 1 ORDER BY product.create_time LIMIT ? OFFSET ?`,
+        [perPage, offset]
+    );
 
     // 商品類別 - 主類別
     let [categoryMain] = await pool.execute('SELECT product_ins_main.id AS mainId, product_ins_main.name AS mainName  FROM product_ins_main');
@@ -47,7 +47,8 @@ router.get('/', async (req, res) => {
     });
 });
 
-// // GET http://localhost:3000/products?main_id=1&sub_id=1
+// GET http://localhost:3000/products?main_id=1&sub_id=1
+// http://localhost:3001/api/products/1&2
 router.get('/:mainId&:subId', async (req, res) => {
     const mainId = req.params.mainId;
     const subId = req.params.subId;
@@ -57,7 +58,7 @@ router.get('/:mainId&:subId', async (req, res) => {
     // 每一頁拿24筆資料
     const perPage = 24;
     // 取得總筆數
-    let [total] = await pool.execute('SELECT COUNT(*) AS total FROM product WHERE ins_main_id = ? && ins_sub_id = ? ', [mainId, subId]);
+    let [total] = await pool.execute('SELECT COUNT(*) AS total FROM product WHERE ins_main_id = ? || ins_sub_id = ? && valid = 1', [mainId, subId]);
     total = total[0].total;
     // 計算總頁數 Math.ceil
     let lastPage = Math.ceil(total / perPage);
@@ -65,7 +66,7 @@ router.get('/:mainId&:subId', async (req, res) => {
     const offset = perPage * (page - 1);
 
     let [data] = await pool.execute(
-        'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? && ins_sub_id = ? ORDER BY product.create_time LIMIT ? OFFSET ?',
+        'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? || ins_sub_id = ? && valid = 1	ORDER BY product.create_time LIMIT ? OFFSET ?',
         [mainId, subId, perPage, offset]
     );
     // 把取得的資料回覆給前端
@@ -78,6 +79,16 @@ router.get('/:mainId&:subId', async (req, res) => {
         },
         data,
     });
+});
+
+// GET http://localhost:3000/products/detail?product_id=1
+// http://localhost:3001/api/products/1
+router.get('/:productId', async (req, res) => {
+    const productId = req.params.productId;
+    let [data] = await pool.execute('SELECT * FROM product WHERE product_id = ? && valid = 1', [productId]);
+    let [dataImg] = await pool.execute('SELECT * FROM product_img WHERE product_id= ?', [productId]);
+    // 把取得的資料回覆給前端
+    res.json({ data, dataImg });
 });
 
 module.exports = router;
