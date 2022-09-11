@@ -148,10 +148,11 @@ router.post('/login', async (req, res, next) => {
     // // }
     // console.log(' req.body.password =', req.body.password);
     // console.log(' member.password =', member.password);
+    // console.log(req.body.password === member.password);
     //TODO:測試暫時跳過密碼雜湊
     if (!(req.body.password === member.password)) {
         // 如果密碼不對，就回覆 401
-        return res.json({ message: '帳號或密碼錯誤' });
+        return res.status(401).json({ message: '帳號或密碼錯誤' });
     }
 
     // 密碼比對成功 -> 存在 session
