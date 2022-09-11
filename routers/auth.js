@@ -17,7 +17,7 @@ const registerRules = [
     body('password').isLength({ min: 8 }).withMessage('密碼長度至少為 8'),
     // 中間件: 檢查 password & confirmPassword 是否一致
     // 客製自己想要的條件
-    body('confirmPassword')
+    body('repassword')
         .custom((value, { req }) => {
             return value === req.body.password;
         })
@@ -69,20 +69,34 @@ const uploader = multer({
     },
     // 過濾檔案的大小
     limits: {
-        // 1k = 1024 => 200k = 200 * 1024
-        fileSize: 200 * 1024,
+        // 1k = 1024 => 1MB = 1024 * 1024
+        fileSize: 1024 * 1024,
     },
 });
 
-// /api/1.0/auth/register
+//登入驗證
+// /api/auth
+router.get('/', (req, res, next) => {
+    console.log('check Login');
+    console.log(req.session.member);
+    if (!req.session.member) {
+        return res.status(401).json({ message: '尚未登入' });
+    }
+    console.log(req.session);
+    res.json(req.session.member);
+});
+
+//註冊
+// /api/auth/register
 router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
     // TODO: 要用 try-catch 把 await 程式包起來
 
     // 確認資料有沒有收到
-    console.log('register', req.body, req.file);
+    // console.log('register', req.body, req.file);
     // 驗證來自前端的資料
     const validateResult = validationResult(req);
     console.log('validateResult', validateResult);
+    console.log('END');
     if (!validateResult.isEmpty()) {
         // validateResult 不是空 -> 有錯誤 -> 回覆給前端
         return res.status(400).json({ errors: validateResult.array() });
@@ -91,23 +105,25 @@ router.post('/register', uploader.single('photo'), registerRules, async (req, re
     // 檢查 email 有沒有重複 -> 不能有重複
     // 方法1: 交給 DB: 把 email 欄位設定成 unique
     // 方法2: 我們自己去檢查 -> 去資料撈撈看這個 email 有沒有存在 -> 可能會有 race condition
-    let [members] = await pool.execute('SELECT * FROM members WHERE email = ?', [req.body.email]);
+    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
     if (members.length > 0) {
         // 如果有，回覆 400 跟錯誤訊息
         // members 的長度 > 0 -> 有資料 -> 這個 email 註冊過
         return res.status(400).json({ message: '這個 email 已經註冊過' });
     }
 
-    // 密碼要雜湊 hash
+    // 密碼要雜湊 hash  TODO:測試暫時不雜湊
     let hashedPassword = await bcrypt.hash(req.body.password, 10);
     // 資料存到資料庫
     let filename = req.file ? '/uploads/' + req.file.filename : '';
-    let result = await pool.execute('INSERT INTO members (email, password, name, photo) VALUES (?, ?, ?, ?);', [req.body.email, hashedPassword, req.body.name, filename]);
+    let result = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, req.body.password, req.body.sub]);
     console.log('insert new member', result);
     // 回覆前端
-    res.json({ message: 'ok' });
+    res.json({ message: '註冊成功' });
 });
 
+//登入
+// /api/auth/login
 router.post('/login', async (req, res, next) => {
     console.log('login Innnnnnnn');
     console.log('login', req.body);
@@ -118,7 +134,7 @@ router.post('/login', async (req, res, next) => {
         // 這個 email 沒有註冊過，就回覆 401
         // 如果有，回覆 401 跟錯誤訊息
         // members 的長度 == 0 -> 沒有資料 -> 這個 email 沒有註冊過
-        return res.status(401).json({ message: '帳號或密碼錯誤1' });
+        return res.status(401).json({ message: '帳號或密碼錯誤' });
     }
     let member = members[0];
     // // 有註冊過，就去比密碼
@@ -132,10 +148,11 @@ router.post('/login', async (req, res, next) => {
     // // }
     // console.log(' req.body.password =', req.body.password);
     // console.log(' member.password =', member.password);
-    //暫時測試跳過密碼雜湊
+    // console.log(req.body.password === member.password);
+    //TODO:測試暫時跳過密碼雜湊
     if (!(req.body.password === member.password)) {
         // 如果密碼不對，就回覆 401
-        return res.json({ message: '帳號或密碼錯誤2' });
+        return res.status(401).json({ message: '帳號或密碼錯誤' });
     }
 
     // 密碼比對成功 -> 存在 session
@@ -144,12 +161,12 @@ router.post('/login', async (req, res, next) => {
         fullName: member.name,
         email: member.email,
         phone: member.phone,
-        birthday: member.birthday,
+        city: member.city,
+        dist: member.dist,
         address: member.address,
+        birthday: member.birthday,
         photo: member.photo,
         sub: member.sub,
-        password: '********',
-        repassword: '',
         loginDt: new Date().toISOString(),
     };
     // 把資料寫進 session 裡
@@ -160,9 +177,75 @@ router.post('/login', async (req, res, next) => {
     // res.json({ message: 'TESTOK' });
 });
 
+//登出
+// /api/auth/logout
 router.get('/logout', (req, res, next) => {
     req.session.member = null;
     res.json({ message: '已登出' });
+});
+
+//修改資料
+// /api/auth/profile
+router.put('/profile', async (req, res, next) => {
+    console.log('update profile');
+    await pool.execute('UPDATE users SET name=?, email=?, phone=?, city=?, dist=?, address=?, birthday=?, sub=? WHERE id=?', [
+        req.body.fullName,
+        req.body.email,
+        req.body.phone,
+        req.body.city,
+        req.body.dist,
+        req.body.address,
+        req.body.birthday,
+        req.body.sub,
+        req.body.id,
+    ]);
+
+    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
+    let member = members[0];
+    let saveMember = {
+        id: member.id,
+        fullName: member.name,
+        email: member.email,
+        phone: member.phone,
+        city: member.city,
+        dist: member.dist,
+        address: member.address,
+        birthday: member.birthday,
+        photo: member.photo,
+        sub: member.sub,
+        loginDt: new Date().toISOString(),
+    };
+    // 更新session
+    req.session.member = saveMember;
+    res.json({ message: '會員資料修改成功' });
+});
+
+//修改密碼
+// /api/auth/password
+router.put('/password', async (req, res, next) => {
+    console.log('update password');
+    if (req.body.password.length < 8) {
+        // 如果密碼不對，就回覆 401
+        return res.status(401).json({ message: '密碼長度至少為 8' });
+    }
+    if (!(req.body.password === req.body.repassword)) {
+        // 如果密碼不對，就回覆 401
+        return res.status(401).json({ message: '密碼驗證不一致' });
+    }
+    await pool.execute('UPDATE users SET password=? WHERE id=?', [req.body.password, req.session.member.id]);
+    res.json({ message: '密碼修改成功' });
+});
+
+//修改相片
+// /api/auth/photo
+router.get('/photo', (req, res, next) => {
+    console.log('check Login');
+    console.log(req.session.member);
+    if (!req.session.member) {
+        return res.status(401).json({ message: '尚未登入' });
+    }
+    console.log(req.session);
+    res.json(req.session.member);
 });
 
 module.exports = router;
