@@ -34,6 +34,9 @@ app.use(
 
 app.use(express.json());
 
+// http://localhost:3001/public/uploads/member-1662947792766.jpg
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 let authRouter = require('./routers/auth');
 app.use('/api/auth', authRouter);
 

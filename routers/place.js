@@ -2,12 +2,18 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 
-router.post('/rent', (req, res, next) => {
+router.put('/rent', async(req, res, next) => {
     console.log('123', req.body);
-    // const datetime = req.rent.usedate + req.rent.time
-    // console.log(datetime);
-    // let [data] = await pool.execute(`INSERT INTO venue_reservation `);
-    // console.log('1');
+    await pool.execute('INSERT INTO venue_reservation (name, user_id, email, phone, usedate, item, comment, usercount) VALUES (?, ?, ?, ?, ?, ?, ?, ?);', [
+        req.body.fullName,
+        req.body.user_id,
+        req.body.email,
+        req.body.phone,
+        req.body.usedate,
+        req.body.item,
+        req.body.comment,
+        req.body.usercount,   
+    ]);
     res.json({ message: 'ok' });
 });
 
