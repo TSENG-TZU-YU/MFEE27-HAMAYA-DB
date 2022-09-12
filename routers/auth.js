@@ -248,7 +248,3 @@ router.post('/photo', uploader.single('photo'), async (req, res, next) => {
 });
 
 module.exports = router;
-
-// ```json=
-// {"email":"ashleylai58@gmail.com","name":"ashley","password":"testtest","confirmPassword":"testtest"}
-// ```
