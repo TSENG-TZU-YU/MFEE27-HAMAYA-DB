@@ -25,10 +25,12 @@ router.get('/list?:category', async (req, res, next) => {
     const offset = perPage * (page - 1);
 
     //AND class_img.main_image=1 限制圖片
-    let [data] = await pool.execute(
-        `SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1 ORDER BY  class.price LIMIT ? OFFSET ? `,
-        [classCategory, perPage, offset]
-    );
+    //ORDER BY  class.price
+    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1  LIMIT ? OFFSET ? `, [
+        classCategory,
+        perPage,
+        offset,
+    ]);
 
     // 把取得的資料回覆給前端
     res.json({
