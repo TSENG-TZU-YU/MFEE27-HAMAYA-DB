@@ -76,14 +76,32 @@ const uploader = multer({
 
 //登入驗證
 // /api/auth
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
     console.log('check Login');
     console.log(req.session.member);
     if (!req.session.member) {
         return res.status(401).json({ message: '尚未登入' });
     }
-    console.log(req.session);
-    res.json(req.session.member);
+
+    // 更新session
+    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.session.member.email]);
+    let member = members[0];
+    let saveMember = {
+        id: member.id,
+        fullName: member.name,
+        email: member.email,
+        phone: member.phone,
+        city: member.city,
+        dist: member.dist,
+        address: member.address,
+        birthday: member.birthday,
+        photo: member.photo,
+        sub: member.sub,
+        loginDt: new Date().toISOString(),
+    };
+    req.session.member = saveMember;
+
+    res.json(saveMember);
 });
 
 //註冊
@@ -201,6 +219,7 @@ router.put('/profile', async (req, res, next) => {
         req.body.id,
     ]);
 
+    // 更新session
     let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
     let member = members[0];
     let saveMember = {
@@ -216,8 +235,8 @@ router.put('/profile', async (req, res, next) => {
         sub: member.sub,
         loginDt: new Date().toISOString(),
     };
-    // 更新session
     req.session.member = saveMember;
+
     res.json({ message: '會員資料修改成功' });
 });
 
@@ -244,7 +263,7 @@ router.post('/photo', uploader.single('photo'), async (req, res, next) => {
     console.log(req.file);
     let filename = req.file ? '/uploads/' + req.file.filename : '';
     await pool.execute('UPDATE users SET photo=? WHERE id=?', [filename, req.session.member.id]);
-    res.json({ message: '新增照片成功' });
+    res.json({ message: '新增照片成功', photo: filename });
 });
 
 module.exports = router;
