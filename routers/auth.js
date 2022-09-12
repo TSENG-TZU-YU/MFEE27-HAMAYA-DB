@@ -203,24 +203,27 @@ router.get('/logout', (req, res, next) => {
     res.json({ message: '已登出' });
 });
 
-//修改資料
+//更新資料
 // /api/auth/profile
-router.put('/profile', async (req, res, next) => {
-    console.log('update profile');
-    await pool.execute('UPDATE users SET name=?, email=?, phone=?, city=?, dist=?, address=?, birthday=?, sub=? WHERE id=?', [
+router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
+    console.log('會員資料更新: id =', req.body.id, ', name =', req.body.fullName);
+
+    let filename = req.file ? '/uploads/' + req.file.filename : req.session.member.photo;
+    let result = await pool.execute('UPDATE users SET name=?, phone=?, city=?, dist=?, address=?, birthday=?, photo=?, sub=? WHERE id=?', [
         req.body.fullName,
-        req.body.email,
         req.body.phone,
         req.body.city,
         req.body.dist,
         req.body.address,
         req.body.birthday,
+        filename,
         req.body.sub,
         req.body.id,
     ]);
+    console.log(result);
 
     // 更新session
-    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
+    let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
     let member = members[0];
     let saveMember = {
         id: member.id,
@@ -236,13 +239,13 @@ router.put('/profile', async (req, res, next) => {
         loginDt: new Date().toISOString(),
     };
     req.session.member = saveMember;
-
-    res.json({ message: '會員資料修改成功' });
+    res.json({ message: '會員資料修改成功', photo: filename });
+    // res.json({ message: '新增照片成功', photo: filename });
 });
 
-//修改密碼
+//更新密碼
 // /api/auth/password
-router.put('/password', async (req, res, next) => {
+router.patch('/password', async (req, res, next) => {
     console.log('update password');
     if (req.body.password.length < 8) {
         // 如果密碼不對，就回覆 401
@@ -254,16 +257,6 @@ router.put('/password', async (req, res, next) => {
     }
     await pool.execute('UPDATE users SET password=? WHERE id=?', [req.body.password, req.session.member.id]);
     res.json({ message: '密碼修改成功' });
-});
-
-//修改相片
-// /api/auth/photo
-router.post('/photo', uploader.single('photo'), async (req, res, next) => {
-    console.log('uploader photo');
-    console.log(req.file);
-    let filename = req.file ? '/uploads/' + req.file.filename : '';
-    await pool.execute('UPDATE users SET photo=? WHERE id=?', [filename, req.session.member.id]);
-    res.json({ message: '新增照片成功', photo: filename });
 });
 
 module.exports = router;
