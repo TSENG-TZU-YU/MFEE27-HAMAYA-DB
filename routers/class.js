@@ -25,7 +25,7 @@ router.get('/list?:category', async (req, res, next) => {
     const offset = perPage * (page - 1);
 
     //AND class_img.main_image=1 限制圖片
-    //ORDER BY  class.price
+    //ORDER BY  class.start_date
     let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1  LIMIT ? OFFSET ? `, [
         classCategory,
         perPage,
@@ -56,5 +56,11 @@ router.get('/list/:classDetailID', async (req, res, next) => {
     res.json(data);
 });
 
-// 匯出給別人用
+// 列出老師
+router.get('/', async (req, res, next) => {
+    let [data] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id && valid=1 ORDER BY teacher.id DESC`);
+
+    res.json(data);
+});
+// 匯出
 module.exports = router;
