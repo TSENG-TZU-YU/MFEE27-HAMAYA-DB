@@ -26,22 +26,19 @@ router.get('/list?:category', async (req, res, next) => {
 
     //AND class_img.main_image=1 限制圖片
     //ORDER BY  class.start_date
-    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1  LIMIT ? OFFSET ? `, [
-        classCategory,
-        perPage,
-        offset,
-    ]);
+    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1  `, [classCategory]);
 
     // 把取得的資料回覆給前端
-    res.json({
-        pagination: {
-            total, // 總共有幾筆
-            perPage, // 一頁有幾筆
-            page, // 目前在第幾頁
-            lastPage, // 總頁數
-        },
-        data,
-    });
+    res.json(data);
+    // res.json({
+    //     pagination: {
+    //         total, // 總共有幾筆
+    //         perPage, // 一頁有幾筆
+    //         page, // 目前在第幾頁
+    //         lastPage, // 總頁數
+    //     },
+    //     data,
+    // });
 });
 
 // 列出某個課程
