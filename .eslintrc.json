@@ -8,5 +8,7 @@
     "ecmaVersion": "latest"
   },
   "extends": ["eslint:recommended", "plugin:prettier/recommended"],
-  "rules": {}
+  "rules": {
+    "no-unused-vars":"warn"
+  }
 }
