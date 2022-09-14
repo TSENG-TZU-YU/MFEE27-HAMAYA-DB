@@ -6,6 +6,7 @@ router.put('/ask', async (req, res, next) => {
     console.log('444', req.body);
 
     try {
+        const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
         const askerros = {};
         if (req.body.fullName === '') {
             askerros.fullName = '請填入姓名';
@@ -15,6 +16,10 @@ router.put('/ask', async (req, res, next) => {
         }
         if (req.body.email === '') {
             askerros.email = '請輸入信箱';
+        } else if (req.body.email.search(emailRule) != -1) {
+            console.log('yes');
+        } else {
+            askerros.email = '請輸入正確格式';
         }
         if (req.body.q_category == '0') {
             askerros.q_category = '請選擇問題類型';
