@@ -60,7 +60,7 @@ router.get('/category', async (req, res) => {
     }
 });
 
-// GET http://localhost:3001/api/products/main_id=null&sub_id=1
+// GET http://localhost:3001/api/products?mainId=null&subId=1
 router.get('/', async (req, res) => {
     try {
         const mainId = req.query.mainId;
@@ -69,8 +69,10 @@ router.get('/', async (req, res) => {
             let [data] = await pool.execute(
                 'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE valid = 1 ORDER BY product.create_time DESC'
             );
+            let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE valid = 1');
             res.json({
                 data,
+                color,
             });
             return;
         }
@@ -79,8 +81,10 @@ router.get('/', async (req, res) => {
                 'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_sub_id = ? && valid = 1 ORDER BY product.create_time DESC',
                 [subId]
             );
+            let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE ins_sub_id = ? && valid = 1', [subId]);
             res.json({
                 data,
+                color,
             });
             return;
         }
@@ -89,8 +93,10 @@ router.get('/', async (req, res) => {
                 'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? && valid = 1 ORDER BY product.create_time DESC',
                 [mainId]
             );
+            let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE ins_main_id = ? && valid = 1', [mainId]);
             res.json({
                 data,
+                color,
             });
             return;
         }
