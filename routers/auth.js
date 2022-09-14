@@ -220,7 +220,7 @@ router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
         req.body.sub,
         req.body.id,
     ]);
-    console.log(result);
+    // console.log(result);
 
     // 更新session
     let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
@@ -239,7 +239,7 @@ router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
         loginDt: new Date().toISOString(),
     };
     req.session.member = saveMember;
-    res.json({ message: '會員資料修改成功', photo: filename });
+    res.json([saveMember, '會員資料修改成功']);
     // res.json({ message: '新增照片成功', photo: filename });
 });
 
