@@ -12,21 +12,23 @@ router.get('/list?:category', async (req, res, next) => {
     console.log(classCategory);
 
     // 分頁
-    let page = req.query.page || 1;
+    // let page = req.query.page || 1;
     // 每一頁拿幾筆資料
     const perPage = 6;
     // 取得總筆數
-    let [total] = await pool.execute('SELECT COUNT(*) AS total FROM class WHERE class.ins_main_id=?', [classCategory]);
-    total = total[0].total;
+    // let [total] = await pool.execute('SELECT COUNT(*) AS total FROM class WHERE class.ins_main_id=?', [classCategory]);
+    // total = total[0].total;
 
     // 計算總頁數 Math.ceil
-    let lastPage = Math.ceil(total / perPage);
+    // let lastPage = Math.ceil(total / perPage);
     // 計算 offset
-    const offset = perPage * (page - 1);
+    // const offset = perPage * (page - 1);
 
     //AND class_img.main_image=1 限制圖片
     //ORDER BY  class.start_date
-    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.id=class_img.id WHERE  class.ins_main_id=? && valid=1  `, [classCategory]);
+    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON class.product_id=class_img.product_id WHERE  class.ins_main_id=? && valid=1  `, [
+        classCategory,
+    ]);
 
     // 把取得的資料回覆給前端
     res.json(data);

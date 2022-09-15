@@ -2,35 +2,27 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 
-//登入驗證
-router.get('/', (req, res, next) => {
-    console.log('check Login');
-    console.log(req.session.member);
-    if (!req.session.member) {
-        return res.status(401).json({ message: '尚未登入' });
-    }
-    console.log(req.session);
-    res.json(req.session.member);
+//讀取優惠券
+router.post('/mycoupon', async (req, res, next) => {
+    console.log('loading myCoupon');
+    // console.log(req.session.member);
+    let result = await pool.execute('SELECT * FROM coupon WHERE user_id = ?', [req.session.member.id]);
+
+    res.json({ message: 'TEST myCoupon' });
 });
 
-router.get('/profile', (req, res, next) => {
-    console.log('check Login');
+//新增優惠券
+router.post('/addcoupon', async (req, res, next) => {
+    console.log('addcoupon ');
     console.log(req.session.member);
-    if (!req.session.member) {
-        return res.status(401).json({ message: '尚未登入' });
-    }
+
+    let result = await pool.execute('UPDATE coupon SET take_count=?  WHERE id=?', [req.body, req.body]);
+    let result2 = await pool.execute('UPDATE coupon_detail SET valid=? WHERE coupon_id=? AND user_id=?', [req.body, req.body, req.body]);
+
     console.log(req.session);
-    res.json(req.session.member);
+    res.json({ message: 'TEST myCoupon' });
 });
 
-router.get('/password', (req, res, next) => {
-    console.log('check Login');
-    console.log(req.session.member);
-    if (!req.session.member) {
-        return res.status(401).json({ message: '尚未登入' });
-    }
-    console.log(req.session);
-    res.json(req.session.member);
-});
+//使用優惠券
 
 module.exports = router;
