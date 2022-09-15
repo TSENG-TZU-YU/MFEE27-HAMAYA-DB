@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../utils/db');
 
 //讀取優惠券
-router.post('/mycoupon', async (req, res, next) => {
+router.get('/mycoupon', async (req, res, next) => {
     console.log('loading myCoupon');
     // console.log(req.session.member);
     let [myCoupon] = await pool.execute('SELECT coupon_detail.* ,coupon.* FROM coupon_detail JOIN coupon ON coupon_detail.coupon_id  = coupon.id WHERE coupon_detail.user_id=? ', [
