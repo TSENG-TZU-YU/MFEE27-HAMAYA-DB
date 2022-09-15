@@ -23,7 +23,7 @@ router.post('/', async (req, res, next) => {
 
 //http://localhost:3001/api/cart
 //DELETE FROM user_cart WHERE user_id=2 AND product_id=A123
-//會員刪除購物車內容
+//delete會員刪除購物車內容
 router.delete('/', async (req, res, next) => {
     // console.log('取得該會員要刪除user_cart內容', req.body);
     const user_id = req.body.user_id;
@@ -35,6 +35,7 @@ router.delete('/', async (req, res, next) => {
         let [response] = await pool.execute(
             `SELECT user_cart.*, product.product_id,product.name,product.price,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id WHERE user_id= ?`,
             [user_id]
+            //TODO:要加上class的查詢
         );
         res.json({ user_id: user_id, items_amount: response.length, message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝', myCart: response });
         // res.json({ message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝' });
@@ -43,16 +44,25 @@ router.delete('/', async (req, res, next) => {
     }
 });
 
+//GET查詢資料庫
 router.get('/:id', async (req, res, next) => {
     console.log('req.params', req.params);
     const user_id = req.params.id;
     try {
-        let [response] = await pool.execute(
+        //查到product
+        let [response_product] = await pool.execute(
             `SELECT user_cart.*, product.product_id,product.name,product.price,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id WHERE user_id= ?`,
             [user_id]
         );
+        //TODO:class圖片db
+        // let [response_class] = await pool.execute(
+        //     `SELECT user_cart.*, class.product_id,class.name,class.price,class_img.image FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
+        //     [user_id]
+        // );
+        // const response = response_product.concat(response_class);
+        const response = response_product;
         console.log('get response', response);
-        if (response) {
+        if (response_product) {
             res.json({ user_id: user_id, items_amount: response.length, message: 'GET 購物車 資料成功', myCart: response });
         } else {
             res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
