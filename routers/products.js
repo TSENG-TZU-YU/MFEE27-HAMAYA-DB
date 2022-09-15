@@ -22,13 +22,14 @@ router.get('/', async (req, res) => {
         const subId = req.query.subId;
         if (mainId === 'null' && subId === 'null') {
             let [data] = await pool.execute(
-                // SELECT product.*, brand.name AS brandName FROM product INNER JOIN brand ON brand.id = product.ins_brand INNER JOIN product_img ON product_img.product_id = product.product_id WHERE valid = 1 ORDER BY product.create_time DESC
-                'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE valid = 1 ORDER BY product.create_time DESC'
+                // SELECT product.*, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY product.create_time DESC
+                // 撈近 25 天內的資料
+                'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY product.create_time DESC'
             );
             let [brand] = await pool.execute(
-                'SELECT DISTINCT brand.id, brand.name AS brandName FROM brand JOIN product ON product.ins_brand = brand.id WHERE valid = 1 ORDER BY brand.id'
+                'SELECT DISTINCT brand.id, brand.name AS brandName FROM brand JOIN product ON product.ins_brand = brand.id WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY brand.id'
             );
-            let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE valid = 1');
+            let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1');
             let [maxPrice] = await pool.execute('SELECT MAX(price) AS maxPrice FROM product WHERE valid = 1');
             res.json({
                 data,
