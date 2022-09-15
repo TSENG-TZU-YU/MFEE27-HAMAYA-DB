@@ -5,17 +5,19 @@ const pool = require('../utils/db');
 //購物車INSERT http://localhost:3001/api/cart
 router.post('/', async (req, res, next) => {
     console.log('cart 中間件', req.body);
-    const [data] = req.body;
+    const data = req.body;
     try {
-        let saveItemData = await pool.execute(`INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUE (?,?,?,?)`, [
-            data.user_id,
-            data.product_id,
-            data.category_id,
-            data.amount,
-        ]);
+        // let saveItemData = await pool.execute(`INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUE (?,?,?,?)`, [
+        //     data.user_id,
+        //     data.product_id,
+        //     data.category_id,
+        //     data.amount,
+        // ]);
+        //TODO:多筆處理 陣列！很重要！
+        let saveItemData = await pool.query('INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUES ? ', [data]);
         console.log('saveItemData', saveItemData);
 
-        res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝', insertId: [saveItemData].insertId });
+        res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
     } catch (err) {
         console.log({ message: '新增失敗' });
     }
