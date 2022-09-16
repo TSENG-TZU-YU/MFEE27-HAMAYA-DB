@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
                 'SELECT DISTINCT brand.id, brand.name AS brandName FROM brand JOIN product ON product.ins_brand = brand.id WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY brand.id'
             );
             let [color] = await pool.execute('SELECT DISTINCT color FROM product WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1');
-            let [maxPrice] = await pool.execute('SELECT MAX(price) AS maxPrice FROM product WHERE valid = 1');
+            let [maxPrice] = await pool.execute('SELECT MAX(price) AS maxPrice FROM product WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1');
             res.json({
                 data,
                 brand,
@@ -82,21 +82,25 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET http://localhost:3001/api/products/1
+// GET http://localhost:3001/api/products/A1?mainId=1
 router.get('/:productId', async (req, res) => {
     try {
+        const mainId = req.query.mainId;
         const productId = req.params.productId;
-        // let [data] = await pool.execute('SELECT * FROM product WHERE product_id = ? && valid = 1', [productId]);
         let [data] = await pool.execute(
             'SELECT product.*, brand.name AS brandName, order_shipment.name AS shipmentName FROM product INNER JOIN brand ON brand.id = product.ins_brand INNER JOIN order_shipment ON order_shipment.id = product.shipment WHERE product_id = ? && valid = 1',
             [productId]
         );
-        let [dataImg] = await pool.execute('SELECT image FROM product_img WHERE product_id= ?', [productId]);
-        // 把取得的資料回覆給前端
-        res.json({ data, dataImg });
+        let [dataImg] = await pool.execute('SELECT image, image_1, image_2 FROM product_img WHERE product_id= ?', [productId]);
+        let [relatedProducts] = await pool.execute(
+            'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? && valid = 1 ORDER BY RAND() LIMIT 4',
+            [mainId]
+        );
+        res.json({ data, dataImg, relatedProducts });
     } catch (err) {
         res.status(404).json({ err: err });
     }
 });
+
 
 module.exports = router;
