@@ -6,23 +6,23 @@ const pool = require('../utils/db');
 router.post('/', async (req, res, next) => {
     // console.log('cart 中間件', req.body);
     const [data] = req.body;
-    // try {
-    let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [data.product_id, data.user_id]);
-    if (checkData.length === 0) {
-        let saveItemData = await pool.execute(`INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUE (?,?,?,?)`, [
-            data.user_id,
-            data.product_id,
-            data.category_id,
-            data.amount,
-        ]);
-        console.log('saveItemData', saveItemData);
-        res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
-    } else {
-        res.json({ repeat: 1, message: '已加入購物車，可以去會員專區 > 購物車修改數量，謝謝' });
+    try {
+        let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [data.product_id, data.user_id]);
+        if (checkData.length === 0) {
+            let saveItemData = await pool.execute(`INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUE (?,?,?,?)`, [
+                data.user_id,
+                data.product_id,
+                data.category_id,
+                data.amount,
+            ]);
+            console.log('saveItemData', saveItemData);
+            res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
+        } else {
+            res.json({ repeat: 1, message: '已加入購物車，可以去會員專區 > 購物車修改數量，謝謝' });
+        }
+    } catch (err) {
+        console.log({ message: '新增失敗單筆?' });
     }
-    // } catch (err) {
-    //     console.log({ message: '新增失敗單筆?' });
-    // }
 });
 
 //購物車 多筆 INSERT http://localhost:3001/api/cart/multi
