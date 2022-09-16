@@ -18,7 +18,7 @@ router.post('/', async (req, res, next) => {
             console.log('saveItemData', saveItemData);
             res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
         } else {
-            res.json({ repeat: 1, message: '已加入購物車，可以去會員專區 > 購物車修改數量，謝謝' });
+            res.json({ duplicate: 1, message: '已加入購物車，可以去會員專區 > 購物車修改數量，謝謝' });
         }
     } catch (err) {
         console.log({ message: '新增失敗單筆?' });
@@ -101,7 +101,7 @@ router.get('/:id', async (req, res, next) => {
         // const response = response_class;
         console.log('get response', response);
         if (response) {
-            res.json({ user_id: user_id, items_amount: response.length, message: 'GET 購物車 資料成功', myCart: response });
+            res.json({ user_id: user_id, message: 'GET 購物車 資料成功', myCart: response });
         } else {
             res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
         }
