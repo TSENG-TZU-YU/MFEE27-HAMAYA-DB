@@ -6,9 +6,10 @@ const pool = require('../utils/db');
 router.get('/mycoupon', async (req, res, next) => {
     console.log('loading myCoupon');
     // console.log(req.session.member);
-    let [myCoupon] = await pool.execute('SELECT coupon_detail.* ,coupon.* FROM coupon_detail JOIN coupon ON coupon_detail.coupon_id  = coupon.id WHERE coupon_detail.user_id=? ', [
-        req.session.member.id,
-    ]);
+    let [myCoupon] = await pool.execute(
+        'SELECT coupon_detail.* ,coupon.* FROM coupon_detail JOIN coupon ON coupon_detail.coupon_id  = coupon.id WHERE coupon_detail.user_id=? ORDER BY coupon_detail.use DESC, coupon.end_time DESC ',
+        [req.session.member.id]
+    );
     // let [myCoupon] = await pool.execute(
     //     'SELECT coupon.* ,coupon_detail.user_id FROM coupon JOIN coupon_detail ON coupon.id = coupon_detail.coupon_id WHERE coupon_detail.user_id=? ',
     //     [req.session.member.id]
