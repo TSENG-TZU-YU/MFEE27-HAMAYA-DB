@@ -61,9 +61,6 @@ app.use('/api/place', placeRouter);
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
 
-let cartRouter = require('./routers/cart');
-app.use('/api/cart', cartRouter);
-
 app.use((req, res, next) => {
     console.log('在所有路由中間件的下面 -> 404 了！');
     res.status(404).send('Not Found!!');
