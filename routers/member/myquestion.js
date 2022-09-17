@@ -13,4 +13,21 @@ router.get('/loading', async (req, res, next) => {
     res.json(myQuestion);
 });
 
+//新增問題
+router.post('/add', async (req, res, next) => {
+    console.log('add myQuestion');
+    //TODO:表單驗證
+    let result = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
+        req.session.member.fullName,
+        req.session.member.id,
+        req.session.member.email,
+        req.session.member.phone,
+        req.body.q_category,
+        req.body.title,
+        req.body.comment,
+    ]);
+    console.log('insert new Question', result);
+    res.json({ message: '表單送出成功' });
+});
+
 module.exports = router;
