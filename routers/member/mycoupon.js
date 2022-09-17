@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../utils/db');
+const pool = require('../../utils/db');
 
 //讀取優惠券
-router.get('/mycoupon', async (req, res, next) => {
+router.get('/loading', async (req, res, next) => {
     console.log('loading myCoupon');
     // console.log(req.session.member);
     let [myCoupon] = await pool.execute(
@@ -19,7 +19,7 @@ router.get('/mycoupon', async (req, res, next) => {
 });
 
 //新增優惠券
-router.post('/addcoupon', async (req, res, next) => {
+router.post('/add', async (req, res, next) => {
     console.log('addcoupon ');
     //判斷是否有輸入
     if (!req.body.sn) {
@@ -48,7 +48,5 @@ router.post('/addcoupon', async (req, res, next) => {
     let result3 = await pool.execute('INSERT INTO coupon_detail (coupon_id, user_id) VALUES (?, ?);', [coupon.id, req.session.member.id]);
     res.json({ message: '優惠券新增成功' });
 });
-
-//使用優惠券
 
 module.exports = router;

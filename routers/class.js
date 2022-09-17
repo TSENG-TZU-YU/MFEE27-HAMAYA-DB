@@ -9,11 +9,7 @@ const pool = require('../utils/db');
 router.get('/list?:category', async (req, res, next) => {
     // 使用數字 query
     const classCategory = req.query.class;
-    console.log(classCategory);
 
-    //AND class_img.main_image=1 限制圖片
-    //ORDER BY  class.start_date
-    // class.product_id=class_img.product_id
     let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE  class.ins_main_id=? && valid=1  `, [
         classCategory,
     ]);
@@ -25,37 +21,37 @@ router.get('/list?:category', async (req, res, next) => {
 // 列出某個課程
 // http://localhost:3001/api/class/list/1
 router.get('/list/:classDetailID', async (req, res, next) => {
+    const classCategory = req.query.class;
     // 使用網址 params
     const classDetailID = req.params.classDetailID;
-    console.log(classDetailID);
-    // const page = req.query.page;
+    console.log('classCategory', classCategory);
 
-    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=? `, [classDetailID]);
+    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=? && valid=1 `, [
+        classDetailID,
+    ]);
 
-    function generateRandomInt(max) {
-        return Math.floor(Math.random() * max);
-    }
-    let [data2] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=?  `, [generateRandomInt(10)]);
-    let [data3] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=?  `, [generateRandomInt(10)]);
-    let [data4] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=?  `, [generateRandomInt(10)]);
-    let [data5] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=?  `, [generateRandomInt(10)]);
+    let [dataImg] = await pool.execute('SELECT image_1, image_2, image_3 FROM class_img WHERE class_img.id= ?', [classDetailID]);
 
-    res.json({
-        data,
-        dataALL: {
-            data2,
-            data3,
-            data4,
-            data5,
-        },
-    });
+    let [recommendClass] = await pool.execute(
+        `SELECT class.*,class_img.product_id,class_img.image_1  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.ins_main_id=? ORDER BY RAND() LIMIT 4`,
+        [classCategory]
+    );
+
+    res.json({ data, dataImg, recommendClass });
 });
 
-// 列出老師
+// 列出老師 + 最新音樂文章
 router.get('/', async (req, res, next) => {
-    let [data] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id && valid=1 ORDER BY teacher.id DESC`);
+    let [teacher] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id && valid=1 ORDER BY teacher.id DESC`);
 
-    res.json(data);
+    // article、article_img、article_category  關聯
+    let [article] = await pool.execute(
+        `SELECT article.*,article_img.*,article_category.* FROM article JOIN article_img ON article.id=article_img.id  JOIN article_category ON article.category=article_category.id  WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 3 OFFSET 1`
+    );
+    let [article1] = await pool.execute(
+        `SELECT article.*,article_img.*,article_category.* FROM article JOIN article_img ON article.id=article_img.id  JOIN article_category ON article.category=article_category.id  WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 1`
+    );
+    res.json({ teacher, article, article1 });
 });
 
 // 列出某個老師
@@ -67,5 +63,6 @@ router.get('/teacher/:teacherDetailID', async (req, res, next) => {
 
     res.json(data);
 });
+
 // 匯出
 module.exports = router;

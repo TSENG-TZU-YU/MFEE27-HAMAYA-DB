@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 
-router.put('/ask', async (req, res, next) => {
+router.post('/ask', async (req, res, next) => {
     console.log('444', req.body);
 
     try {
