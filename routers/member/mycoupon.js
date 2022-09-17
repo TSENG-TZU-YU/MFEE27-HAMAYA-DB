@@ -49,6 +49,4 @@ router.post('/add', async (req, res, next) => {
     res.json({ message: '優惠券新增成功' });
 });
 
-//使用優惠券
-
 module.exports = router;
