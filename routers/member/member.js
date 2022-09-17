@@ -1,6 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../utils/db');
+const pool = require('../../utils/db');
+
+let myclassRouter = require('./myclass');
+router.use('/myclass', myclassRouter);
+
+let mybucketlistRouter = require('./mybucketlist');
+router.use('/mybucketlist', mybucketlistRouter);
+
+let mycartRouter = require('./mycart');
+router.use('/mycart', mycartRouter);
+
+let myorderRouter = require('./myorder');
+router.use('/myorder', myorderRouter);
+
+let mycouponRouter = require('./mycoupon');
+router.use('/mycoupon', mycouponRouter);
+
+let myquestionRouter = require('./myquestion');
+router.use('/myquestion', myquestionRouter);
+
+let myplaceRouter = require('./myplace');
+router.use('/myplace', myplaceRouter);
 
 //讀取優惠券
 router.get('/mycoupon', async (req, res, next) => {
@@ -51,4 +72,11 @@ router.post('/addcoupon', async (req, res, next) => {
 
 //使用優惠券
 
+//讀取我的問題
+//http://localhost:3001/api/member/myquestion
+router.get('/myquestion', async (req, res, next) => {
+    console.log('loading myQuestion');
+    let [myQuestion] = await pool.execute('SELECT user_qna.*  FROM user_qna WHERE user_id=? ORDER BY create_time DESC', [req.session.member.id]);
+    res.json(myQuestion);
+});
 module.exports = router;
