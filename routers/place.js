@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 
-router.put('/rent', async (req, res, next) => {
+router.post('/rent', async (req, res, next) => {
     console.log('123', req.body);
     try {
         const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
