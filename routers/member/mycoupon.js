@@ -5,6 +5,9 @@ const pool = require('../../utils/db');
 //讀取優惠券
 router.get('/loading', async (req, res, next) => {
     console.log('loading myCoupon');
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
     // console.log(req.session.member);
     let [myCoupon] = await pool.execute(
         'SELECT coupon_detail.* ,coupon.* FROM coupon_detail JOIN coupon ON coupon_detail.coupon_id  = coupon.id WHERE coupon_detail.user_id=? ORDER BY coupon_detail.use DESC, coupon.end_time DESC ',
