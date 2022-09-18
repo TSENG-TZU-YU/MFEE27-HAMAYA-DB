@@ -22,9 +22,8 @@ router.get('/', async (req, res) => {
         const subId = req.query.subId;
         if (mainId === 'null' && subId === 'null') {
             let [data] = await pool.execute(
-                // SELECT product.*, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY product.create_time DESC
                 // 撈近 25 天內的資料
-                'SELECT product.*, product_img.image FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY product.create_time DESC'
+                'SELECT product.*, product_img.image, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY product.create_time DESC'
             );
             let [brand] = await pool.execute(
                 'SELECT DISTINCT brand.id, brand.name AS brandName FROM brand JOIN product ON product.ins_brand = brand.id WHERE DATE_SUB(CURDATE(), INTERVAL 25 DAY) <= product.create_time && valid = 1 ORDER BY brand.id'
@@ -41,7 +40,7 @@ router.get('/', async (req, res) => {
         }
         if (mainId === 'null') {
             let [data] = await pool.execute(
-                'SELECT product.*, product_img.image FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_sub_id = ? && valid = 1 ORDER BY product.create_time DESC',
+                'SELECT product.*, product_img.image, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE ins_sub_id = ? && valid = 1 ORDER BY product.create_time DESC;',
                 [subId]
             );
             let [brand] = await pool.execute(
@@ -60,7 +59,7 @@ router.get('/', async (req, res) => {
         }
         if (subId === 'null') {
             let [data] = await pool.execute(
-                'SELECT product.*, product_img.image FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? && valid = 1 ORDER BY product.create_time DESC',
+                'SELECT product.*, product_img.image, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE ins_main_id = ? && valid = 1 ORDER BY product.create_time DESC',
                 [mainId]
             );
             let [brand] = await pool.execute(
@@ -93,7 +92,7 @@ router.get('/:productId', async (req, res) => {
         );
         let [dataImg] = await pool.execute('SELECT image, image_1, image_2 FROM product_img WHERE product_id= ?', [productId]);
         let [relatedProducts] = await pool.execute(
-            'SELECT * FROM product JOIN product_img ON product_img.product_id = product.product_id WHERE ins_main_id = ? && valid = 1 ORDER BY RAND() LIMIT 4',
+            'SELECT product.*, product_img.image, brand.name AS brandName FROM product INNER JOIN product_img ON product_img.product_id = product.product_id INNER JOIN brand ON brand.id = product.ins_brand WHERE ins_main_id = ? && valid = 1 ORDER BY RAND() LIMIT 4',
             [mainId]
         );
         res.json({ data, dataImg, relatedProducts });
