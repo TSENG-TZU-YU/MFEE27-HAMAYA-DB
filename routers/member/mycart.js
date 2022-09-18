@@ -86,9 +86,9 @@ router.delete('/', async (req, res, next) => {
 
 //GET查詢資料庫
 router.get('/:id', async (req, res, next) => {
-    console.log('req.params', req.params);
+    // console.log('req.params', req.params);
     const user_id = req.params.id;
-    console.log('req.params', user_id);
+    // console.log('req.params', user_id);
     try {
         //查到product
         let [response_product] = await pool.execute(

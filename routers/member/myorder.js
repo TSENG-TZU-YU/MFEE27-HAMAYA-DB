@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../../utils/db');
 const moment = require('moment');
 
+//成立訂單
 router.post('/', async (req, res, next) => {
     console.log('myorder 中間件', req.body);
     const [data] = req.body;
@@ -37,6 +38,16 @@ router.post('/', async (req, res, next) => {
     } catch (err) {
         res.status(404).json({ message: '新增訂單失敗' });
     }
+});
+
+//SELECT * FROM `order_product` WHERE user_id=2
+router.get('/:id', async (req, res, next) => {
+    console.log('req.params', req.params);
+    const user_id = req.params.id;
+    let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=2`, [user_id]);
+
+    console.log(response);
+    res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
 });
 
 module.exports = router;
