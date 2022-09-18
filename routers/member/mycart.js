@@ -4,7 +4,7 @@ const pool = require('../../utils/db');
 
 //單筆 INSERT http://localhost:3001/api/member/mycart
 router.post('/', async (req, res, next) => {
-    // console.log('cart 中間件', req.body);
+    console.log('cart 中間件', req.body);
     const [data] = req.body;
     try {
         let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [data.product_id, data.user_id]);
@@ -86,8 +86,9 @@ router.delete('/', async (req, res, next) => {
 
 //GET查詢資料庫
 router.get('/:id', async (req, res, next) => {
-    console.log('req.params', req.params);
+    // console.log('req.params', req.params);
     const user_id = req.params.id;
+    // console.log('req.params', user_id);
     try {
         //查到product
         let [response_product] = await pool.execute(
@@ -101,7 +102,7 @@ router.get('/:id', async (req, res, next) => {
         );
         const response = response_product.concat(response_class);
         // const response = response_class;
-        // console.log('get response', response);
+        console.log('get response', response);
         if (response) {
             res.json({ user_id: user_id, message: 'GET 購物車 資料成功', myCart: response });
         } else {
