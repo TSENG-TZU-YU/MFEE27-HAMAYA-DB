@@ -59,15 +59,15 @@ router.get('/detail', async (req, res, next) => {
         'SELECT user_qna.*, user_q_category.name AS user_q_category  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id WHERE user_qna.id=? AND user_qna.user_id =?',
         [qaid, req.session.member.id]
     );
-    let myQuestionDetail = myQuestionDetailArray[0];
+    let detail = myQuestionDetailArray[0];
 
     if (!myQuestionDetailArray) {
         return res.status(401).json({ message: '僅能查看本人詳細問答' });
     }
 
-    let [myQuestionDetailContent] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [qaid]);
+    let [content] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [qaid]);
 
-    res.json({ myQuestionDetail, myQuestionDetailContent });
+    res.json({ detail, content });
 });
 
-module.exports = router;
+module.exports = router
