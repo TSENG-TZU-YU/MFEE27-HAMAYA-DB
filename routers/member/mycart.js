@@ -46,7 +46,7 @@ router.post('/multi', async (req, res, next) => {
                     return v[1] === id;
                 });
                 let saveItemData = await pool.query('INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUES ? ', [newData]);
-                console.log('saveItemData', saveItemData);
+                // console.log('saveItemData', saveItemData);
             }
         });
         res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
