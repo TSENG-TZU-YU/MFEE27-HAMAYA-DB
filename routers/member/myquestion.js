@@ -32,7 +32,7 @@ router.post('/add', async (req, res, next) => {
     if (req.body.comment === '') {
         return res.status(401).json({ message: '請填寫完整內容' });
     }
-    let result = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
+    let [result] = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
         req.session.member.fullName,
         req.session.member.id,
         req.session.member.email,
@@ -42,6 +42,13 @@ router.post('/add', async (req, res, next) => {
         req.body.comment,
     ]);
     console.log('insert new Question', result);
+
+    let result2 = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [
+        result.insertId,
+        req.session.member.fullName,
+        req.body.comment,
+    ]);
+    console.log('result2', result2);
     res.json({ message: '收到~小編會盡快回覆您的問題!!' });
 });
 
@@ -70,4 +77,4 @@ router.get('/detail', async (req, res, next) => {
     res.json({ detail, content });
 });
 
-module.exports = router
+module.exports = router;
