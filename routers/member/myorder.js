@@ -28,7 +28,18 @@ router.post('/', async (req, res, next) => {
         //存detail
         let saveItemData = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detail]);
 
-        console.log('saveItemData', saveItemData);
+        // console.log('saveItemData 成立訂單', saveItemData);
+        let products_delete = data.product_detail.map((item) => {
+            return [item.product_id];
+        });
+
+        // console.log('刪除cart 產生訂單', products_delete);
+        //刪除在購物車的商品
+        for (let i = 0; i < products_delete.length; i++) {
+            let deleteItemData = await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
+            console.log('deleteItemData', deleteItemData);
+        }
+        // console.log('deleteItemData', deleteItemData);
 
         res.json({ order_id: order_id, message: '訂單已成立，可以去會員專區 > 訂單查詢 查看，謝謝' });
     } catch (err) {
@@ -37,6 +48,7 @@ router.post('/', async (req, res, next) => {
 });
 
 //SELECT * FROM `order_product` WHERE user_id=2
+//查詢訂單
 router.get('/:id', async (req, res, next) => {
     console.log('req.params', req.params);
     const user_id = req.params.id;
@@ -56,5 +68,6 @@ router.get('/:id', async (req, res, next) => {
 });
 
 //TODO:查detail時要比對連線這跟該資料使用id是否相同
+router.get('/:order_id', async (req, res, next) => {});
 
 module.exports = router;
