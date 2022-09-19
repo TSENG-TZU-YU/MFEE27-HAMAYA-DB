@@ -19,7 +19,7 @@ router.get('/loading', async (req, res, next) => {
 //新增問題
 router.post('/add', async (req, res, next) => {
     console.log('add myQuestion');
-    //TODO:表單驗證
+    //表單驗證
     if (!req.session.member) {
         return res.status(401).json({ message: '已登出請重新登入' });
     }
@@ -57,11 +57,11 @@ router.post('/add', async (req, res, next) => {
 router.get('/detail', async (req, res, next) => {
     console.log('myQuestionDetail');
     const qaid = req.query.qaid;
-    //TODO:檢驗是否為本人
+
     if (!req.session.member) {
         return res.status(401).json({ message: '已登出請重新登入' });
     }
-
+    //檢驗是否為本人
     let [myQuestionDetailArray] = await pool.execute(
         'SELECT user_qna.*, user_q_category.name AS user_q_category  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id WHERE user_qna.id=? AND user_qna.user_id =?',
         [qaid, req.session.member.id]
@@ -75,6 +75,26 @@ router.get('/detail', async (req, res, next) => {
     let [content] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [qaid]);
 
     res.json({ detail, content });
+});
+
+//新增回覆
+//http://localhost:3001/api/member/myquestion/reply
+router.post('/reply', async (req, res, next) => {
+    console.log('reply myQuestion');
+    console.log('data:', req.body);
+    console.log('name:', req.session.member.fullName);
+    // const qaid = req.query.qaid;
+    // if (!req.session.member) {
+    //     return res.status(401).json({ message: '已登出請重新登入' });
+    // }
+
+    let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [
+        req.body.user_qna_id,
+        req.session.member.fullName,
+        req.body.q_content,
+    ]);
+
+    res.json({ message: 'OK' });
 });
 
 module.exports = router;
