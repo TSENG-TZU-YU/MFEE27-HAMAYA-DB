@@ -40,8 +40,7 @@ router.post('/rent', async (req, res, next) => {
             return;
         }
         const usedate = `${req.body.date} ${req.body.time}`;
-
-        await pool.execute('INSERT INTO venue_reservation (name, user_id, email, phone, usedate, item, comment, usercount) VALUES (?, ?, ?, ?, ?, ?, ?, ?);', [
+        let [result] = await pool.execute('INSERT INTO venue_reservation (name, user_id, email, phone, usedate, item, comment, usercount) VALUES (?, ?, ?, ?, ?, ?, ?, ?);', [
             req.body.fullName,
             req.body.user_id,
             req.body.email,
@@ -51,6 +50,9 @@ router.post('/rent', async (req, res, next) => {
             req.body.comment,
             req.body.usercount,
         ]);
+        console.log('789789:', result.insertId);
+
+        await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?);', [result.insertId, req.body.fullName, req.body.comment]);
         res.json({ message: 'ok' });
     } catch (err) {
         console.log();

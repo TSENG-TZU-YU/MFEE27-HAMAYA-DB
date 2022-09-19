@@ -32,7 +32,7 @@ router.post('/add', async (req, res, next) => {
     if (req.body.comment === '') {
         return res.status(401).json({ message: '請填寫完整內容' });
     }
-    let result = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
+    let [result] = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
         req.session.member.fullName,
         req.session.member.id,
         req.session.member.email,
@@ -42,6 +42,13 @@ router.post('/add', async (req, res, next) => {
         req.body.comment,
     ]);
     console.log('insert new Question', result);
+
+    let result2 = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [
+        result.insertId,
+        req.session.member.fullName,
+        req.body.comment,
+    ]);
+    console.log('result2', result2);
     res.json({ message: '收到~小編會盡快回覆您的問題!!' });
 });
 
@@ -59,15 +66,15 @@ router.get('/detail', async (req, res, next) => {
         'SELECT user_qna.*, user_q_category.name AS user_q_category  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id WHERE user_qna.id=? AND user_qna.user_id =?',
         [qaid, req.session.member.id]
     );
-    let myQuestionDetail = myQuestionDetailArray[0];
+    let detail = myQuestionDetailArray[0];
 
     if (!myQuestionDetailArray) {
         return res.status(401).json({ message: '僅能查看本人詳細問答' });
     }
 
-    let [myQuestionDetailContent] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [qaid]);
+    let [content] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [qaid]);
 
-    res.json({ myQuestionDetail, myQuestionDetailContent });
+    res.json({ detail, content });
 });
 
 module.exports = router;
