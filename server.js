@@ -16,31 +16,44 @@ const io = new Server(server, {
     },
 });
 
+//傳到router中才能被呼叫
+app.io = io;
+
 // 當有 client 連線的時候，觸發這個 connection 事件
 io.on('connection', (socket) => {
     console.log('socket: a user connected', socket.id);
     socket.on('disconnect', () => {
         console.log('socket: user disconnected');
     });
-    socket.on('name', (data) => {
+    //會員連線
+    socket.on('memberName', (data) => {
         console.log('會員連線', data.fullName);
-        // setInterval(() => {
         socket.emit(`userid${data.id}`, '連線成功');
-        // }, 3 * 1000);
+    });
+    //管理員連線
+    socket.on('customerName', async (data) => {
+        console.log('管理員連線', data.customerName);
+
+        //尋找會員user_id
+        let [getMemberArray] = await pool.execute('SELECT * FROM user_qna WHERE id=?', [data.user_qna_id]);
+        let getMember = getMemberArray[0];
+        console.log('getMember', getMember);
+
+        //傳送管理員ID給會員
+        io.emit(`userid${getMember.user_id}`, { customerName: data.customerName });
     });
     // socket 「聽」MFEE27
-    socket.on('MFEE27', (msg) => {
-        console.log('socket: msg from MFEE27', msg);
-        socket.broadcast.emit('chat', msg);
-    });
-    socket.on('chat', (msg) => {
-        console.log('socket: msg from chat', msg);
-
-        // socket.broadcast.emit('chat2', '這是無聊的轟炸訊息');
-    });
+    // socket.on('MFEE27', (msg) => {
+    //     console.log('socket: msg from MFEE27', msg);
+    //     socket.broadcast.emit('chat', msg);
+    // });
+    // socket.on('chat', (msg) => {
+    //     console.log('socket: msg from chat', msg);
+    // });
     // setInterval(() => {
-    //     socket.broadcast.emit('這是無聊的轟炸訊息');
-    // }, 3 * 1000);
+    //     socket.emit(`userid2`, '這是無聊的轟炸訊息');
+    //     console.log('123');
+    // }, 5 * 1000);
 });
 
 const cors = require('cors');
@@ -109,5 +122,5 @@ app.use((req, res, next) => {
 
 // 啟動 server，並且開始 listen 一個 port
 server.listen(port, () => {
-    console.log(`server start at ${port}`)
+    console.log(`server start at ${port}`);
 });

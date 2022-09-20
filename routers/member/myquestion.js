@@ -94,6 +94,8 @@ router.post('/reply', async (req, res, next) => {
         req.body.q_content,
     ]);
 
+    //請管理員更新資料庫
+
     res.json({ message: 'OK' });
 });
 
