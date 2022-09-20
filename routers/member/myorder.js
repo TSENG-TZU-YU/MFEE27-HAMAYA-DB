@@ -50,24 +50,62 @@ router.post('/', async (req, res, next) => {
 //SELECT * FROM `order_product` WHERE user_id=2
 //查詢訂單
 router.get('/:id', async (req, res, next) => {
-    console.log('req.params', req.params);
+    console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
     // let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=?`, [user_id]);
-    let [response_product] = await pool.execute(
-        `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ?;`,
-        [user_id]
-    );
-    let [response_class] = await pool.execute(
-        `SELECT order_product.*, order_product_detail.category_id,class_img.image_1 FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE order_product.user_id = ?;`,
-        [user_id]
-    );
-    const response = response_product.concat(response_class);
-    console.log(response);
+    if (typeof user_id === Number) {
+        next();
+    }
+    try {
+        let [response_product] = await pool.execute(
+            `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ?;`,
+            [user_id]
+        );
+        let [response_class] = await pool.execute(
+            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1 FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE order_product.user_id = ?;`,
+            [user_id]
+        );
+        const response = response_product.concat(response_class);
+        console.log(response);
 
-    res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
+        res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
+    } catch (err) {
+        res.status(404).json({ message: '訂單查詢失敗' });
+    }
 });
 
 //TODO:查detail時要比對連線這跟該資料使用id是否相同
-router.get('/:order_id', async (req, res, next) => {});
+// params: { order_id: 'A6542801' },
+// query: { user_id: '123', order_id: 'A123456' }
+router.get('/detail/:order_id', async (req, res, next) => {
+    // console.log('查詢order_id req.params', req);
+    //取得user_id判斷此訂單是否為該使用者輸入
+    const user_id = req.query.user_id;
+    const order_id = req.query.order_id;
+
+    //查詢
+    // let [response] = await pool.execute(
+    //     `SELECT order_product.*, order_product_detail.* ,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ? AND order_product.order_id= ?`,
+    //     [user_id, order_id]
+    // );
+    //使用者資訊
+    let [response_userInfo] = await pool.execute(`SELECT * FROM order_product WHERE order_id= ? AND user_id = ?`, [order_id, user_id]);
+    //使用者購買清單
+    let [response_orderListA] = await pool.execute(
+        `SELECT order_product_detail.* ,product_img.image FROM order_product_detail JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE  order_product_detail.order_id=?`,
+        [order_id]
+    );
+    let [response_orderListB] = await pool.execute(
+        `SELECT order_product_detail.* ,class_img.image_1 FROM order_product_detail JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE  order_product_detail.order_id=?`,
+        [order_id]
+    );
+
+    console.log('response_userInfo', response_userInfo);
+
+    const response = response_orderListA.concat(response_orderListB);
+    console.log('response', response);
+
+    res.json({ user_id: user_id, message: 'All Good 訂單詳細查詢', userInfo: response_userInfo, orderList: response });
+});
 
 module.exports = router;
