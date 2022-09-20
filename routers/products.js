@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 
+// 商品列表次類別
 // GET http://localhost:3001/api/products/category
 router.get('/category', async (req, res) => {
     try {
@@ -15,6 +16,7 @@ router.get('/category', async (req, res) => {
     }
 });
 
+// 商品列表
 // GET http://localhost:3001/api/products?mainId=null&subId=1
 router.get('/', async (req, res) => {
     try {
@@ -81,6 +83,7 @@ router.get('/', async (req, res) => {
     }
 });
 
+// 商品詳細頁
 // GET http://localhost:3001/api/products/A1?mainId=1
 router.get('/:productId', async (req, res) => {
     try {
