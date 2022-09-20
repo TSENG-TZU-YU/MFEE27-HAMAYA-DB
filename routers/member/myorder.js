@@ -7,6 +7,7 @@ const moment = require('moment');
 router.post('/', async (req, res, next) => {
     // console.log('myorder 中間件', req.body);
     const [data] = req.body;
+    // console.log('data', data);
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //郵遞區號
@@ -22,13 +23,28 @@ router.post('/', async (req, res, next) => {
         );
 
         //產品組陣列
-        let product_detail = data.product_detail.map((item) => {
+        let filter_A = data.product_detail.filter((value) => {
+            return value.category_id === 'A';
+        });
+
+        let product_detailA = filter_A.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.amount, item.price, 1];
         });
-        //存detail
-        let saveItemData = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detail]);
 
-        // console.log('saveItemData 成立訂單', saveItemData);
+        let filter_B = data.product_detail.filter((value) => {
+            return value.category_id === 'B';
+        });
+
+        let product_detailB = filter_B.map((item) => {
+            return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
+        });
+        //存detail
+        let saveItemDataA = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
+
+        let saveItemDataB = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [
+            product_detailB,
+        ]);
+
         let products_delete = data.product_detail.map((item) => {
             return [item.product_id];
         });
@@ -37,9 +53,8 @@ router.post('/', async (req, res, next) => {
         //刪除在購物車的商品
         for (let i = 0; i < products_delete.length; i++) {
             let deleteItemData = await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
-            console.log('deleteItemData', deleteItemData);
+            // console.log('deleteItemData', deleteItemData);
         }
-        // console.log('deleteItemData', deleteItemData);
 
         res.json({ order_id: order_id, message: '訂單已成立，可以去會員專區 > 訂單查詢 查看，謝謝' });
     } catch (err) {
@@ -50,12 +65,9 @@ router.post('/', async (req, res, next) => {
 //SELECT * FROM `order_product` WHERE user_id=2
 //查詢訂單
 router.get('/:id', async (req, res, next) => {
-    console.log('查詢user_id req.params', req.params);
+    // console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
     // let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=?`, [user_id]);
-    if (typeof user_id === Number) {
-        next();
-    }
     try {
         let [response_product] = await pool.execute(
             `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ?;`,
@@ -82,30 +94,31 @@ router.get('/detail/:order_id', async (req, res, next) => {
     //取得user_id判斷此訂單是否為該使用者輸入
     const user_id = req.query.user_id;
     const order_id = req.query.order_id;
+    try {
+        //使用者資訊
+        let [response_userInfo] = await pool.execute(`SELECT * FROM order_product WHERE order_id= ? AND user_id = ?`, [order_id, user_id]);
 
-    //查詢
-    // let [response] = await pool.execute(
-    //     `SELECT order_product.*, order_product_detail.* ,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ? AND order_product.order_id= ?`,
-    //     [user_id, order_id]
-    // );
-    //使用者資訊
-    let [response_userInfo] = await pool.execute(`SELECT * FROM order_product WHERE order_id= ? AND user_id = ?`, [order_id, user_id]);
-    //使用者購買清單
-    let [response_orderListA] = await pool.execute(
-        `SELECT order_product_detail.* ,product_img.image FROM order_product_detail JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE  order_product_detail.order_id=?`,
-        [order_id]
-    );
-    let [response_orderListB] = await pool.execute(
-        `SELECT order_product_detail.* ,class_img.image_1 FROM order_product_detail JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE  order_product_detail.order_id=?`,
-        [order_id]
-    );
+        console.log('response_userInfo', response_userInfo);
 
-    console.log('response_userInfo', response_userInfo);
+        //使用者購買清單
+        let [response_orderListA] = await pool.execute(
+            `SELECT order_product_detail.* ,product_img.image, brand.name AS brand_name FROM order_product_detail JOIN product_img ON order_product_detail.product_id = product_img.product_id JOIN product ON order_product_detail.product_id = product.product_id JOIN brand ON product.ins_brand = brand.id WHERE order_product_detail.order_id=?`,
+            [order_id]
+        );
+        let [response_orderListB] = await pool.execute(
+            `SELECT order_product_detail.* ,class_img.image_1 FROM order_product_detail JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE  order_product_detail.order_id=?`,
+            [order_id]
+        );
 
-    const response = response_orderListA.concat(response_orderListB);
-    console.log('response', response);
+        // console.log('response_userInfo', response_userInfo);
 
-    res.json({ user_id: user_id, message: 'All Good 訂單詳細查詢', userInfo: response_userInfo, orderList: response });
+        const response = response_orderListA.concat(response_orderListB);
+        // console.log('response', response);
+
+        res.json({ user_id: user_id, message: 'All Good 訂單詳細查詢', userInfo: response_userInfo, orderList: response });
+    } catch (err) {
+        res.status(404).json({ message: '訂單詳細查詢失敗' });
+    }
 });
 
 module.exports = router;
