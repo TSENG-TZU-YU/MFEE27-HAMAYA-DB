@@ -5,6 +5,36 @@ const port = process.env.SERVER_PORT;
 const pool = require('./utils/db.js');
 const path = require('path');
 
+// nodejs 內建的 http 功能
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(server, {
+    cors: {
+        origin: ['http://localhost:3000'],
+        credentials: true,
+    },
+});
+
+// 當有 client 連線的時候，觸發這個 connection 事件
+io.on('connection', (socket) => {
+    console.log('socket: a user connected');
+    socket.on('disconnect', () => {
+        console.log('socket: user disconnected');
+    });
+    socket.on('name', (name) => {
+        console.log('socket: name from name', name);
+    });
+    // socket 「聽」MFEE27
+    socket.on('MFEE27', (msg) => {
+        console.log('socket: msg from MFEE27', msg);
+        socket.broadcast.emit('chat', msg);
+    });
+    // setInterval(() => {
+    //   socket.emit('chat', '這是無聊的轟炸訊息');
+    // }, 10 * 1000);
+});
+
 const cors = require('cors');
 const corsOptions = {
     // 如果要讓 cookie 可以跨網域存取，這邊要設定 credentials
@@ -67,6 +97,6 @@ app.use((req, res, next) => {
 });
 
 // 啟動 server，並且開始 listen 一個 port
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`server start at ${port}`);
 });
