@@ -12,10 +12,16 @@ router.post('/', async (req, res, next) => {
         console.log('checkData.length', checkData.length);
         // 沒有重複才能新增
         if (checkData.length === 0) {
-            let [saveEvaluation] = await pool.execute(
-                `INSERT INTO order_product_detail (member_id,rating, content) VALUE (?,?,?) SELECT * FROM order_product_detail WHERE product_id=?`,
-                [data.memberID, data.rating, data.content, data.classProduct]
-            );
+            let [saveEvaluation] = await pool.execute(`UPDATE order_product_detail  SET member_id=?, rating=?, content=? WHERE product_id=?`, [
+                data.memberID,
+                data.rating,
+                data.content,
+                data.classProduct,
+            ]);
+            // let [saveEvaluation] = await pool.execute(
+            //     `UPDATE order_product_detail (member_id,rating, content) VALUE (?,?,?) SELECT * FROM order_product_detail WHERE product_id=?`,
+            //     [data.memberID, data.rating, data.content, data.classProduct]
+            // );
 
             res.json({ message: '評價成功' });
         }
