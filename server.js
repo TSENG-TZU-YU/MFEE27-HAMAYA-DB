@@ -18,21 +18,29 @@ const io = new Server(server, {
 
 // 當有 client 連線的時候，觸發這個 connection 事件
 io.on('connection', (socket) => {
-    console.log('socket: a user connected');
+    console.log('socket: a user connected', socket.id);
     socket.on('disconnect', () => {
         console.log('socket: user disconnected');
     });
-    socket.on('name', (name) => {
-        console.log('socket: name from name', name);
+    socket.on('name', (data) => {
+        console.log('會員連線', data.fullName);
+        // setInterval(() => {
+        socket.emit(`userid${data.id}`, '連線成功');
+        // }, 3 * 1000);
     });
     // socket 「聽」MFEE27
     socket.on('MFEE27', (msg) => {
         console.log('socket: msg from MFEE27', msg);
         socket.broadcast.emit('chat', msg);
     });
+    socket.on('chat', (msg) => {
+        console.log('socket: msg from chat', msg);
+
+        // socket.broadcast.emit('chat2', '這是無聊的轟炸訊息');
+    });
     // setInterval(() => {
-    //   socket.emit('chat', '這是無聊的轟炸訊息');
-    // }, 10 * 1000);
+    //     socket.broadcast.emit('這是無聊的轟炸訊息');
+    // }, 3 * 1000);
 });
 
 const cors = require('cors');
@@ -91,6 +99,9 @@ app.use('/api/place', placeRouter);
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
 
+let adminRouter = require('./routers/admin');
+app.use('/api/admin', adminRouter);
+
 app.use((req, res, next) => {
     console.log('在所有路由中間件的下面 -> 404 了！');
     res.status(404).send('Not Found!!');
@@ -98,5 +109,5 @@ app.use((req, res, next) => {
 
 // 啟動 server，並且開始 listen 一個 port
 server.listen(port, () => {
-    console.log(`server start at ${port}`);
+    console.log(`server start at ${port}`)
 });

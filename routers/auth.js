@@ -145,7 +145,7 @@ router.post('/register', registerRules, async (req, res, next) => {
 // /api/auth/login
 router.post('/login', async (req, res, next) => {
     console.log('login Innnnnnnn');
-    console.log('login', req.body);
+    // console.log('login', req.body);
     // TODO: 資料驗證
     // 確認這個 email 有沒有註冊過
     let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
