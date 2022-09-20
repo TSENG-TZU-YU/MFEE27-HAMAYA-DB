@@ -64,20 +64,7 @@ router.delete('/', async (req, res, next) => {
     const product_id = req.body.product_id;
     try {
         let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', [user_id, product_id]);
-        //刪除完再查詢送回刪除過後的資料
-        // let [response_product] = await pool.execute(
-        //     `SELECT user_cart.*, product.product_id,product.name,product.price,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id WHERE user_id= ?`,
-        //     [user_id]
-        // );
-        //class圖片db
-        // let [response_class] = await pool.execute(
-        //     `SELECT user_cart.*, class.product_id,class.name,class.price,class_img.image_1 FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
-        //     [user_id]
-        // );
-        // const response = response_product.concat(response_class);
-        // const response = response_class;
-        // console.log('get response', response);
-        // res.json({ user_id: user_id, items_amount: response.length, message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝', myCart: response });
+
         res.json({ user_id: user_id, product_id: product_id, message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝' });
     } catch (err) {
         res.status(404).json({ message: '刪除失敗' });
@@ -90,14 +77,14 @@ router.get('/:id', async (req, res, next) => {
     const user_id = req.params.id;
     // console.log('req.params', user_id);
     try {
-        //查到product
+        //product
         let [response_product] = await pool.execute(
-            `SELECT user_cart.*, product.product_id,product.name,product.price,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id WHERE user_id= ?`,
+            `SELECT user_cart.*, product.product_id,product.name,product.price,brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
             [user_id]
         );
-        //class圖片db
+        //class
         let [response_class] = await pool.execute(
-            `SELECT user_cart.*, class.product_id,class.name,class.price,class_img.image_1 FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
+            `SELECT user_cart.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class_img.image_1 FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
             [user_id]
         );
         const response = response_product.concat(response_class);

@@ -5,6 +5,57 @@ const port = process.env.SERVER_PORT;
 const pool = require('./utils/db.js');
 const path = require('path');
 
+// nodejs 內建的 http 功能
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(server, {
+    cors: {
+        origin: ['http://localhost:3000'],
+        credentials: true,
+    },
+});
+
+//傳到router中才能被呼叫
+app.io = io;
+
+// 當有 client 連線的時候，觸發這個 connection 事件
+io.on('connection', (socket) => {
+    console.log('socket: a user connected', socket.id);
+    socket.on('disconnect', () => {
+        console.log('socket: user disconnected');
+    });
+    //會員連線
+    socket.on('memberName', (data) => {
+        console.log('會員連線', data.fullName);
+        socket.emit(`userid${data.id}`, '連線成功');
+    });
+    //管理員連線
+    socket.on('customerName', async (data) => {
+        console.log('管理員連線', data.customerName);
+
+        //尋找會員user_id
+        let [getMemberArray] = await pool.execute('SELECT * FROM user_qna WHERE id=?', [data.user_qna_id]);
+        let getMember = getMemberArray[0];
+        console.log('getMember', getMember);
+
+        //傳送管理員ID給會員
+        io.emit(`userid${getMember.user_id}`, { customerName: data.customerName });
+    });
+    // socket 「聽」MFEE27
+    // socket.on('MFEE27', (msg) => {
+    //     console.log('socket: msg from MFEE27', msg);
+    //     socket.broadcast.emit('chat', msg);
+    // });
+    // socket.on('chat', (msg) => {
+    //     console.log('socket: msg from chat', msg);
+    // });
+    // setInterval(() => {
+    //     socket.emit(`userid2`, '這是無聊的轟炸訊息');
+    //     console.log('123');
+    // }, 5 * 1000);
+});
+
 const cors = require('cors');
 const corsOptions = {
     // 如果要讓 cookie 可以跨網域存取，這邊要設定 credentials
@@ -61,12 +112,15 @@ app.use('/api/place', placeRouter);
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
 
+let adminRouter = require('./routers/admin');
+app.use('/api/admin', adminRouter);
+
 app.use((req, res, next) => {
     console.log('在所有路由中間件的下面 -> 404 了！');
     res.status(404).send('Not Found!!');
 });
 
 // 啟動 server，並且開始 listen 一個 port
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`server start at ${port}`);
 });
