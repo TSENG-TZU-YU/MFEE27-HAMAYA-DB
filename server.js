@@ -99,6 +99,9 @@ app.use('/api/place', placeRouter);
 let aboutusRouter = require('./routers/aboutus');
 app.use('/api/aboutus', aboutusRouter);
 
+let adminRouter = require('./routers/admin');
+app.use('/api/admin', adminRouter);
+
 app.use((req, res, next) => {
     console.log('在所有路由中間件的下面 -> 404 了！');
     res.status(404).send('Not Found!!');
@@ -106,5 +109,5 @@ app.use((req, res, next) => {
 
 // 啟動 server，並且開始 listen 一個 port
 server.listen(port, () => {
-    console.log(`server start at ${port}`);
+    console.log(`server start at ${port}`)
 });
