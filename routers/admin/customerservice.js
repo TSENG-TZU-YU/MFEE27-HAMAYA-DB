@@ -2,16 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../utils/db');
 
-// const http = require('http');
-// const server = http.createServer(router);
-// const { Server } = require('socket.io');
-// const io = new Server(server, {
-//     cors: {
-//         origin: ['http://localhost:3000'],
-//         credentials: true,
-//     },
-// });
-
 //一般問答
 //http://localhost:3001/api/admin/customerservice/commonqa/loading
 router.get('/commonqa/loading', async (req, res, next) => {
@@ -59,11 +49,7 @@ router.post('/commonqa/reply', async (req, res, next) => {
     let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [req.body.user_qna_id, '客服小編', req.body.q_content]);
 
     //請會員更新資料庫
-    req.app.io.emit(`userid${req.body.user_id}`, { updateMyQA: true });
-    // io.on('connection', (socket) => {
-    //     console.log('123456');
-    //     socket.emit(`userid${req.body.user_id}`, '請更新資料庫');
-    // });
+    req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });
