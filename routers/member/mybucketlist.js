@@ -12,11 +12,7 @@ router.post('/', async (req, res, next) => {
     // }]
     console.log('收藏 中間件', req.body);
     const data = req.body;
-
-    // 後端驗證是否有登入
-    // if (!req.session.member) {
-    //     return res.status(401).json({ message: '尚未登入' });
-    // }
+    console.log(data);
 
     try {
         // 確認 product_id 是否存在
@@ -46,6 +42,18 @@ router.post('/', async (req, res, next) => {
     } catch (err) {
         res.status(404).json({ message: '收藏失敗單筆!' });
         console.log('失敗了');
+    }
+});
+
+//  撈會員收藏商品
+router.get('/:id', async (req, res, next) => {
+    const user_id = req.params.id;
+    console.log(user_id);
+    try {
+        let [products] = await pool.execute(`SELECT product_id FROM user_liked WHERE user_id = ?`, [user_id]);
+        res.json({ message: '收藏查詢成功', products });
+    } catch (err) {
+        res.status(404).json({ message: '收藏查詢失敗' });
     }
 });
 
