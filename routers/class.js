@@ -18,26 +18,38 @@ router.get('/list?:category', async (req, res, next) => {
     res.json(data);
 });
 
-// 列出某個課程
-// http://localhost:3001/api/class/list/1
+// 列出某個課程 +  取得會員評價
+// http://localhost:3001/api/class/list/B1
 router.get('/list/:classDetailID', async (req, res, next) => {
     const classCategory = req.query.class;
     // 使用網址 params
     const classDetailID = req.params.classDetailID;
-    console.log('classCategory', classCategory);
+    console.log('classDetailID', classDetailID);
 
-    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.id=? && valid=1 `, [
+    // 課程
+    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.product_id=? && valid=1 `, [
         classDetailID,
     ]);
 
-    let [dataImg] = await pool.execute('SELECT image_1, image_2, image_3 FROM class_img WHERE class_img.id= ?', [classDetailID]);
+    let [dataImg] = await pool.execute('SELECT image_1, image_2, image_3 FROM class_img WHERE class_img.product_id= ?', [classDetailID]);
 
     let [recommendClass] = await pool.execute(
         `SELECT class.*,class_img.product_id,class_img.image_1  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE class.ins_main_id=? ORDER BY RAND() LIMIT 4`,
         [classCategory]
     );
 
-    res.json({ data, dataImg, recommendClass });
+    // 會員評價
+    let [evaluation] = await pool.execute(
+        `SELECT order_product_detail.* , users.name , users.photo FROM order_product_detail JOIN users ON order_product_detail.member_id = users.id WHERE  order_product_detail.category_id = 'B'  && order_product_detail.product_id=? ORDER BY order_product_detail.evaluation_date DESC`,
+        [classDetailID]
+    );
+
+    // 會員平均評價
+    let [avg] = await pool.execute(`SELECT  round(AVG(rating),1) AS rating, COUNT(member_id) AS member_id FROM order_product_detail  WHERE order_product_detail.product_id=?`, [
+        classDetailID,
+    ]);
+
+    res.json({ data, dataImg, recommendClass, evaluation, avg });
 });
 
 // 列出老師 + 最新音樂文章
