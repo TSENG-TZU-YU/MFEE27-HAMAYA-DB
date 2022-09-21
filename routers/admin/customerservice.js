@@ -59,7 +59,7 @@ router.post('/commonqa/reply', async (req, res, next) => {
     let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [req.body.user_qna_id, '客服小編', req.body.q_content]);
 
     //請會員更新資料庫
-    req.app.io.emit(`userid${req.body.user_id}`, { MyQuestionDetail: true });
+    req.app.io.emit(`userid${req.body.user_id}`, { updateMyQA: true });
     // io.on('connection', (socket) => {
     //     console.log('123456');
     //     socket.emit(`userid${req.body.user_id}`, '請更新資料庫');

@@ -31,8 +31,8 @@ io.on('connection', (socket) => {
         socket.emit(`userid${data.id}`, '連線成功');
     });
     //管理員連線
-    socket.on('customerName', async (data) => {
-        console.log('管理員連線', data.customerName);
+    socket.on('customer_conn', async (data) => {
+        console.log('管理員連線', data.customer_id);
 
         //尋找會員user_id
         let [getMemberArray] = await pool.execute('SELECT * FROM user_qna WHERE id=?', [data.user_qna_id]);
@@ -40,20 +40,8 @@ io.on('connection', (socket) => {
         console.log('getMember', getMember);
 
         //傳送管理員ID給會員
-        io.emit(`userid${getMember.user_id}`, { customerName: data.customerName });
+        io.emit(`userid${getMember.user_id}`, { customer_id: data.customer_id });
     });
-    // socket 「聽」MFEE27
-    // socket.on('MFEE27', (msg) => {
-    //     console.log('socket: msg from MFEE27', msg);
-    //     socket.broadcast.emit('chat', msg);
-    // });
-    // socket.on('chat', (msg) => {
-    //     console.log('socket: msg from chat', msg);
-    // });
-    // setInterval(() => {
-    //     socket.emit(`userid2`, '這是無聊的轟炸訊息');
-    //     console.log('123');
-    // }, 5 * 1000);
 });
 
 const cors = require('cors');
