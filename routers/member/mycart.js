@@ -59,15 +59,36 @@ router.post('/multi', async (req, res, next) => {
 //DELETE FROM user_cart WHERE user_id=2 AND product_id=A123
 //delete會員刪除購物車內容
 router.delete('/', async (req, res, next) => {
-    // console.log('取得該會員要刪除user_cart內容', req.body);
-    const user_id = req.body.user_id;
-    const product_id = req.body.product_id;
-    try {
-        let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', [user_id, product_id]);
+    console.log('取得該會員要刪除user_cart內容', req.body);
+    // const user_id = req.body.user_id;
+    // const product_id = req.body.product_id;
+    //單筆
+    if (req.body.length === 1) {
+        const [newData] = req.body;
+        console.log('req.body.length === 1', newData);
+        try {
+            let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', newData);
 
-        res.json({ user_id: user_id, product_id: product_id, message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝' });
-    } catch (err) {
-        res.status(404).json({ message: '刪除失敗' });
+            console.log('responseDelete', responseDelete);
+            res.json({ user_id: newData[0], product_id: newData[1], message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝' });
+        } catch (err) {
+            res.status(404).json({ message: '刪除失敗' });
+        }
+    }
+    //多筆
+    if (req.body.length > 1) {
+        const newData = req.body;
+        try {
+            let product_id = [];
+            for (let i = 0; i < req.body.length; i++) {
+                let deleteItemData = await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, newData[i]);
+                product_id.push(newData[i][1]);
+                // console.log('deleteItemData', deleteItemData);
+            }
+            res.json({ user_id: newData[0][0], product_id: product_id, message: '已成功刪除全部購物車內容' });
+        } catch (err) {
+            res.status(404).json({ message: '多筆刪除失敗' });
+        }
     }
 });
 
