@@ -72,5 +72,27 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 // 多筆 INSERT POST
+//查詢
+router.get('/:id', async (req, res, next) => {
+    console.log('查詢bucket user_id req.params', req.params);
+    // SELECT * FROM `user_liked` WHERE user_id = 2
+    const user_id = req.params.id;
 
+    let [response_product] = await pool.execute(
+        `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+        [user_id]
+    );
+
+    let [response_class] = await pool.execute(
+        `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+        [user_id]
+    );
+    const response = response_product.concat(response_class);
+    console.log('response', response);
+    if (response) {
+        res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response });
+    } else {
+        res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
+    }
+});
 module.exports = router;

@@ -5,9 +5,9 @@ const moment = require('moment');
 
 //成立訂單
 router.post('/', async (req, res, next) => {
-    console.log('myorder 中間件', req.body);
+    // console.log('myorder 中間件', req.body);
     const [data] = req.body;
-    console.log('data', data);
+    // console.log('data', data);
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //郵遞區號
@@ -68,7 +68,7 @@ router.post('/', async (req, res, next) => {
 //SELECT * FROM `order_product` WHERE user_id=2
 //查詢訂單
 router.get('/:id', async (req, res, next) => {
-    console.log('查詢user_id req.params', req.params);
+    // console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
     // let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=?`, [user_id]);
     try {
