@@ -2,16 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../utils/db');
 
-// const http = require('http');
-// const server = http.createServer(router);
-// const { Server } = require('socket.io');
-// const io = new Server(server, {
-//     cors: {
-//         origin: ['http://localhost:3000'],
-//         credentials: true,
-//     },
-// });
-
 //一般問答
 //http://localhost:3001/api/admin/customerservice/commonqa/loading
 router.get('/commonqa/loading', async (req, res, next) => {
@@ -59,11 +49,7 @@ router.post('/commonqa/reply', async (req, res, next) => {
     let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [req.body.user_qna_id, '客服小編', req.body.q_content]);
 
     //請會員更新資料庫
-    req.app.io.emit(`userid${req.body.user_id}`, { updateMyQA: true });
-    // io.on('connection', (socket) => {
-    //     console.log('123456');
-    //     socket.emit(`userid${req.body.user_id}`, '請更新資料庫');
-    // });
+    req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });
@@ -88,18 +74,41 @@ router.get('/orderqa/detail', async (req, res, next) => {
 //場地問答
 router.get('/placeqa/loading', async (req, res, next) => {
     console.log('loading placeqa');
-    console.log(req.session.member.id);
-    let [myPlace] = await pool.execute('SELECT * FROM `venue_reservation` WHERE user_id=? ORDER BY create_time DESC ', [req.session.member.id]);
+
+    let [myPlace] = await pool.execute('SELECT * FROM `venue_reservation` ORDER BY create_time DESC');
 
     res.json(myPlace);
 });
+
+//場地問答詳細
 router.get('/placeqa/detail', async (req, res, next) => {
     console.log('loading placeqa detail');
     const plid = req.query.plid;
-    console.log(req.session.member.id);
-    let [myPlace] = await pool.execute('SELECT * FROM `venue_reservation` WHERE user_id=? ORDER BY create_time DESC ', [req.session.member.id]);
+    console.log(plid);
 
-    res.json(myPlace);
+    let [myPlaceDetailArray] = await pool.execute('SELECT * FROM `venue_reservation` WHERE id=? ORDER BY create_time DESC', [plid]);
+
+    let detail = myPlaceDetailArray[0];
+    console.log(detail);
+
+    let [myPlace] = await pool.execute('SELECT * FROM `venue_detail` WHERE place_rt_id=?', [plid]);
+    console.log(myPlace);
+
+    res.json({ detail, myPlace });
+});
+
+////場地問答 新增回覆
+//http://localhost:3001/api/admin/customerservice/commonqa/reply
+router.post('/placeqa/reply', async (req, res, next) => {
+    console.log('reply placeqa');
+    console.log('data:', req.body);
+
+    let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [req.body.place_rt_id, '客服小編', req.body.place_content]);
+
+    //請會員更新資料庫
+    // req.app.io.emit(`userid${req.body.user_id}`, { MyQuestionDetail: true });
+
+    res.json({ message: 'OK' });
 });
 
 module.exports = router;

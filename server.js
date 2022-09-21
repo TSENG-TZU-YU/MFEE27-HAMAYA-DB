@@ -26,9 +26,9 @@ io.on('connection', (socket) => {
         console.log('socket: user disconnected');
     });
     //會員連線
-    socket.on('memberName', (data) => {
-        console.log('會員連線', data.fullName);
-        socket.emit(`userid${data.id}`, '連線成功');
+    socket.on('user_conn', (data) => {
+        console.log('使用者連線', data );
+        socket.emit(`userid2`, '連線成功');
     });
     //管理員連線
     socket.on('customer_conn', async (data) => {
