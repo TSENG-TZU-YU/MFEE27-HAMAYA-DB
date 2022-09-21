@@ -14,6 +14,15 @@ router.get('/list?:category', async (req, res, next) => {
         classCategory,
     ]);
 
+    // let [data] = await pool.execute(
+    //     `SELECT class.*,class_img.image_1 ,round(AVG(order_product_detail.rating),0) AS rating FROM class JOIN class_img ON class.product_id=class_img.product_id JOIN order_product_detail ON class.product_id=order_product_detail.product_id WHERE class.ins_main_id=? && class.valid=1 && order_product_detail.product_id = ? `,
+    //     [classCategory]
+    // );
+    // 會員平均評價
+    // let [avg] = await pool.execute(
+    //     `SELECT  round(AVG(rating),0) AS rating, COUNT(member_id) AS member_id FROM order_product_detail JOIN class ON class.product_id = order_product_detail.product_id WHERE class.product_id`
+    // );
+
     // 把取得的資料回覆給前端
     res.json(data);
 });
@@ -45,7 +54,7 @@ router.get('/list/:classDetailID', async (req, res, next) => {
     );
 
     // 會員平均評價
-    let [avg] = await pool.execute(`SELECT  round(AVG(rating),1) AS rating, COUNT(member_id) AS member_id FROM order_product_detail  WHERE order_product_detail.product_id=?`, [
+    let [avg] = await pool.execute(`SELECT  round(AVG(rating),0) AS rating, COUNT(member_id) AS member_id FROM order_product_detail  WHERE order_product_detail.product_id=?`, [
         classDetailID,
     ]);
 
