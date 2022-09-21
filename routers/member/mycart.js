@@ -4,7 +4,7 @@ const pool = require('../../utils/db');
 
 //單筆 INSERT http://localhost:3001/api/member/mycart
 router.post('/', async (req, res, next) => {
-    console.log('cart 中間件', req.body);
+    // console.log('cart 中間件', req.body);
     const [data] = req.body;
     try {
         let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [data.product_id, data.user_id]);
@@ -15,14 +15,15 @@ router.post('/', async (req, res, next) => {
                 data.category_id,
                 data.amount,
             ]);
-            //TODO:這樣可以取得insertId
-            console.log('saveItemData', saveItemData[0].insertId);
-            res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
+            //這樣可以取得insertId
+            // console.log('saveItemData', saveItemData[0].insertId);
+            res.json({ message: '成功加入購物車' });
         } else {
-            res.json({ duplicate: 1, message: '已加入購物車，可以去會員專區 > 購物車修改數量，謝謝' });
+            //訊息為臨時購物車關閉,加入購物車出現的訊息
+            res.json({ duplicate: 1, message: '已加入購物車，可以去會員購物車修改數量' });
         }
     } catch (err) {
-        res.status(404).json({ message: '新增失敗單筆?' });
+        res.status(404).json({ message: '新增失敗單筆' });
     }
 });
 
@@ -49,7 +50,7 @@ router.post('/multi', async (req, res, next) => {
                 // console.log('saveItemData', saveItemData);
             }
         });
-        res.json({ message: '已加入購物車，可以去會員專區 > 購物車查看，謝謝' });
+        res.json({ message: '已成功加入購物車' });
     } catch (err) {
         res.status(404).json({ message: '新增失敗' });
     }
@@ -60,14 +61,35 @@ router.post('/multi', async (req, res, next) => {
 //delete會員刪除購物車內容
 router.delete('/', async (req, res, next) => {
     // console.log('取得該會員要刪除user_cart內容', req.body);
-    const user_id = req.body.user_id;
-    const product_id = req.body.product_id;
-    try {
-        let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', [user_id, product_id]);
+    // const user_id = req.body.user_id;
+    // const product_id = req.body.product_id;
+    //單筆
+    if (req.body.length === 1) {
+        const [newData] = req.body;
+        // console.log('req.body.length === 1', newData);
+        try {
+            let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', newData);
 
-        res.json({ user_id: user_id, product_id: product_id, message: '已成功刪除購物車內容，可以去會員專區 > 購物車查看，謝謝' });
-    } catch (err) {
-        res.status(404).json({ message: '刪除失敗' });
+            // console.log('responseDelete', responseDelete);
+            res.json({ user_id: newData[0], product_id: newData[1], message: '已成功刪除購物車內容' });
+        } catch (err) {
+            res.status(404).json({ message: '刪除失敗' });
+        }
+    }
+    //多筆
+    if (req.body.length > 1) {
+        const newData = req.body;
+        try {
+            let product_id = [];
+            for (let i = 0; i < req.body.length; i++) {
+                let deleteItemData = await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, newData[i]);
+                product_id.push(newData[i][1]);
+                // console.log('deleteItemData', deleteItemData);
+            }
+            res.json({ user_id: newData[0][0], product_id: product_id, message: '已成功刪除多筆購物車內容' });
+        } catch (err) {
+            res.status(404).json({ message: '多筆刪除失敗' });
+        }
     }
 });
 
@@ -89,7 +111,7 @@ router.get('/:id', async (req, res, next) => {
         );
         const response = response_product.concat(response_class);
         // const response = response_class;
-        console.log('get response', response);
+        // console.log('get response', response);
         if (response) {
             res.json({ user_id: user_id, message: 'GET 購物車 資料成功', myCart: response });
         } else {

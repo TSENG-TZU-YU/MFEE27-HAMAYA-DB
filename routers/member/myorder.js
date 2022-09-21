@@ -5,9 +5,9 @@ const moment = require('moment');
 
 //成立訂單
 router.post('/', async (req, res, next) => {
-    // console.log('myorder 中間件', req.body);
+    console.log('myorder 中間件', req.body);
     const [data] = req.body;
-    // console.log('data', data);
+    console.log('data', data);
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //郵遞區號
@@ -17,7 +17,7 @@ router.post('/', async (req, res, next) => {
     let momentTime = moment().format('YYYY-MM-DD HH:mm:ss');
     try {
         //存order_product order_finish先拿掉
-        let saveOrderData = await pool.execute(
+        await pool.execute(
             `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, 9, data.total_amount, momentTime, 1]
         );
@@ -38,12 +38,15 @@ router.post('/', async (req, res, next) => {
         let product_detailB = filter_B.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
         });
-        //存detail
-        let saveItemDataA = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
 
-        let saveItemDataB = await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [
-            product_detailB,
-        ]);
+        //存detail
+        if (product_detailA.length !== 0) {
+            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
+        }
+
+        if (product_detailB.length !== 0) {
+            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [product_detailB]);
+        }
 
         let products_delete = data.product_detail.map((item) => {
             return [item.product_id];
@@ -52,7 +55,7 @@ router.post('/', async (req, res, next) => {
         // console.log('刪除cart 產生訂單', products_delete);
         //刪除在購物車的商品
         for (let i = 0; i < products_delete.length; i++) {
-            let deleteItemData = await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
+            await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
             // console.log('deleteItemData', deleteItemData);
         }
 
@@ -65,16 +68,16 @@ router.post('/', async (req, res, next) => {
 //SELECT * FROM `order_product` WHERE user_id=2
 //查詢訂單
 router.get('/:id', async (req, res, next) => {
-    // console.log('查詢user_id req.params', req.params);
+    console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
     // let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=?`, [user_id]);
     try {
         let [response_product] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ?;`,
+            `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
             [user_id]
         );
         let [response_class] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1 FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE order_product.user_id = ?;`,
+            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1 FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
             [user_id]
         );
         const response = response_product.concat(response_class);

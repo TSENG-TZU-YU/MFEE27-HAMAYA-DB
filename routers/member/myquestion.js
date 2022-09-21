@@ -81,7 +81,7 @@ router.get('/detail', async (req, res, next) => {
 //http://localhost:3001/api/member/myquestion/reply
 router.post('/reply', async (req, res, next) => {
     console.log('reply myQuestion');
-    console.log('data:', req.body);
+    console.log('body:', req.body);
     console.log('name:', req.session.member.fullName);
     // const qaid = req.query.qaid;
     // if (!req.session.member) {
@@ -95,7 +95,8 @@ router.post('/reply', async (req, res, next) => {
     ]);
 
     //請管理員更新資料庫
-
+    req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
+    // req.app.io.emit(req.body.customer_id, { updateCommonQA: true });
     res.json({ message: 'OK' });
 });
 
