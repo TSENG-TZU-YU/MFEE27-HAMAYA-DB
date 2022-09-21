@@ -32,4 +32,26 @@ router.get('/detail', async (req, res, next) => {
     res.json({ detail, content });
 });
 
+//新增回覆
+//http://localhost:3001/api/member/myquestion/reply
+router.post('/reply', async (req, res, next) => {
+    console.log('reply myQuestion');
+    console.log('data:', req.body);
+    console.log('name:', req.session.member.fullName);
+    // const qaid = req.query.qaid;
+    // if (!req.session.member) {
+    //     return res.status(401).json({ message: '已登出請重新登入' });
+    // }
+
+    let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [
+        req.body.place_rt_id,
+        req.session.member.fullName,
+        req.body.place_content,
+    ]);
+
+    //請管理員更新資料庫
+
+    res.json({ message: 'OK' });
+});
+
 module.exports = router;

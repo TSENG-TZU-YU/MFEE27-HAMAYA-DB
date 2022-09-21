@@ -36,7 +36,7 @@ router.post('/ask', async (req, res, next) => {
             res.status(401).json(askerros);
             return;
         }
-        await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
+        let [result] = await pool.execute('INSERT INTO user_qna (name, user_id, email, phone, q_category, title, comment) VALUES (?, ?, ?, ?, ?, ?, ?);', [
             req.body.fullName,
             req.body.user_id,
             req.body.email,
@@ -45,6 +45,7 @@ router.post('/ask', async (req, res, next) => {
             req.body.title,
             req.body.comment,
         ]);
+        await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?);', [result.insertId, req.body.fullName, req.body.comment]);
         res.json({ message: 'ok' });
     } catch (err) {
         console.log();
