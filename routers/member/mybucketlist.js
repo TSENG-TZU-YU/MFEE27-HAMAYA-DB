@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../utils/db');
 
-//單筆 INSERT POST http://localhost:3001/api/member/mybucketlist
+// 單筆 新增收藏 POST http://localhost:3001/api/member/mybucketlist
 router.post('/', async (req, res, next) => {
     // TODO: 要在前端包成陣列送後端
     // data =[{
@@ -33,11 +33,9 @@ router.post('/', async (req, res, next) => {
 
             // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
             let [resProducts] = await pool.execute('SELECT * FROM user_liked WHERE user_id = ?', [data[0].user_id]);
-            res.json({ message: '收藏成功!', resProducts });
-            console.log('收藏成功');
+            res.json({ message: '新增收藏成功', resProducts });
         } else {
             res.json({ message: '已收藏過囉!' });
-            console.log('收藏過了');
         }
     } catch (err) {
         res.status(404).json({ message: '收藏失敗單筆!' });
@@ -45,15 +43,31 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-//  撈會員收藏商品
+//  撈會員收藏商品 http://localhost:3001/api/member/mybucketlist/:id
 router.get('/:id', async (req, res, next) => {
-    const user_id = req.params.id;
+    const user_id = req.session.member.id;
     console.log(user_id);
     try {
         let [products] = await pool.execute(`SELECT product_id FROM user_liked WHERE user_id = ?`, [user_id]);
         res.json({ message: '收藏查詢成功', products });
     } catch (err) {
         res.status(404).json({ message: '收藏查詢失敗' });
+    }
+});
+
+// 單筆 取消收藏 DELETE http://localhost:3001/api/member/mybucketlist/:id
+router.delete('/:id', async (req, res, next) => {
+    const user_id = req.session.member.id;
+    const product_id = req.params.id;
+    console.log(user_id);
+    console.log(product_id);
+    try {
+        await pool.execute(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, [user_id, product_id]);
+        // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
+        let [resProducts] = await pool.execute('SELECT * FROM user_liked WHERE user_id = ?', [user_id]);
+        res.json({ message: '取消收藏成功', resProducts });
+    } catch (err) {
+        res.status(404).json({ message: '取消收藏失敗' });
     }
 });
 
