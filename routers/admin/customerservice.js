@@ -106,7 +106,7 @@ router.post('/placeqa/reply', async (req, res, next) => {
     let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [req.body.place_rt_id, '客服小編', req.body.place_content]);
 
     //請會員更新資料庫
-    // req.app.io.emit(`userid${req.body.user_id}`, { MyQuestionDetail: true });
+    req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });

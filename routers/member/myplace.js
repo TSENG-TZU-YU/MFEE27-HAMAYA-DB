@@ -49,7 +49,8 @@ router.post('/reply', async (req, res, next) => {
         req.body.place_content,
     ]);
 
-    //請管理員更新資料庫
+    //請會員更新資料庫
+    req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });
