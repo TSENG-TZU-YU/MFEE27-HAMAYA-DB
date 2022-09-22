@@ -10,10 +10,10 @@ router.post('/', async (req, res, next) => {
     //   product_id: , string
     //   category_id: , string
     // }]
-    console.log('收藏 中間件', req.body);
+    //單筆
+    // if (req.body.length === 1) {
     const data = req.body;
-    console.log(data);
-
+    // console.log(data);
     try {
         // 確認 product_id 是否存在
         let [checkProductData] = await pool.execute('SELECT product.product_id FROM product WHERE product_id = ? UNION SELECT class.product_id FROM class WHERE product_id = ?', [
@@ -48,6 +48,20 @@ router.post('/', async (req, res, next) => {
         res.status(404).json({ message: '加入收藏失敗' });
         console.log('失敗了');
     }
+    // }
+    //多筆
+    // if (req.body.length > 1) {
+    //     const newData = req.body;
+    //     try {
+    //         let product_id = [];
+    //         let category_id = [];
+    //         for(let i = 0; i<req.body.length; i++){
+    //             let deleteItemData = await pool.execute
+    //         }
+    //     } catch (err) {
+    //         res.status(404).json({ message: '多筆加入收藏失敗' });
+    //     }
+    // }
 });
 
 // 單筆 取消收藏 DELETE http://localhost:3001/api/member/mybucketlist/:id
@@ -103,6 +117,10 @@ router.delete('/delete', async (req, res, next) => {
     }
 });
 // 多筆 INSERT POST
+// 購物車 多筆新增 INSERT http://localhost:3001/api/member/mybucketlist/multi
+// router.post('/', async (req, res, next) => {
+//     console.log('收藏 中間件', req.body);
+// });
 
 //查詢
 router.get('/:id', async (req, res, next) => {

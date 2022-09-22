@@ -4,31 +4,18 @@ const pool = require('../utils/db');
 
 //撈出文章的id與種類 GET/news種類for前端的NEWs切換頁
 // http://localhost:3001/api/news?categoryId=4
-router.get('/article?', async (req, res, next) => {
+router.get('/', async (req, res, next) => {
     const categoryId = req.query.categoryId;
     if (categoryId) {
         let [data] = await pool.execute(
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=? ORDER BY article.creation_date DESC LIMIT 6`,
             [categoryId]
         );
-
         let [news] = await pool.execute(
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`,
             [categoryId]
         );
-        let [news2] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        let [news3] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=3 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        let [news4] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        res.json({ data, news, news2, news3, news4 });
+        res.json({ data, news });
         return;
     }
     let [data] = await pool.execute(
@@ -37,16 +24,7 @@ router.get('/article?', async (req, res, next) => {
     let [news] = await pool.execute(
         `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`
     );
-    let [news2] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    let [news3] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=3 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    let [news4] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    res.json({ data, news, news2, news3, news4 });
+    res.json({ data, news });
 });
 
 // http://localhost:3001/api/news/section?categoryList=4
