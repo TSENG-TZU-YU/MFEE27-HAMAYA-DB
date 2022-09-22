@@ -14,14 +14,11 @@ router.get('/list?:category', async (req, res, next) => {
         classCategory,
     ]);
 
-    // let [data] = await pool.execute(
-    //     `SELECT class.*,class_img.image_1 ,round(AVG(order_product_detail.rating),0) AS rating FROM class JOIN class_img ON class.product_id=class_img.product_id JOIN order_product_detail ON class.product_id=order_product_detail.product_id WHERE class.ins_main_id=? && class.valid=1 && order_product_detail.product_id = ? `,
-    //     [classCategory]
-    // );
-    // 會員平均評價
-    // let [avg] = await pool.execute(
-    //     `SELECT  round(AVG(rating),0) AS rating, COUNT(member_id) AS member_id FROM order_product_detail JOIN class ON class.product_id = order_product_detail.product_id WHERE class.product_id`
-    // );
+    // 會員平均評價 更新
+    await pool.execute(
+        `update class c join
+        (select product_id, avg(rating) as rating ,count(member_id) as member from order_product_detail d group by  product_id ) r on c. product_id = r. product_id set c.rating =r.rating , c.member = r.member`
+    );
 
     // 把取得的資料回覆給前端
     res.json(data);
@@ -53,10 +50,13 @@ router.get('/list/:classDetailID', async (req, res, next) => {
         [classDetailID]
     );
 
-    // 會員平均評價
-    let [avg] = await pool.execute(`SELECT  round(AVG(rating),0) AS rating, COUNT(member_id) AS member_id FROM order_product_detail  WHERE order_product_detail.product_id=?`, [
-        classDetailID,
-    ]);
+    // 會員平均評價--只需要一筆
+    let [avg] = await pool.execute(`SELECT  round(AVG(rating),0) AS rating, COUNT(member_id) AS member_id FROM order_product_detail  WHERE product_id=?`, [classDetailID]);
+
+    // 會員平均評價--全部課程的評價
+    await pool.execute(`select product_id, avg(rating) as rating,count(member_id) as member
+    from order_product_detail d
+    group by product_id`);
 
     res.json({ data, dataImg, recommendClass, evaluation, avg });
 });

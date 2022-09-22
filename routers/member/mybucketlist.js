@@ -42,12 +42,10 @@ router.post('/', async (req, res, next) => {
                 [data[0].user_id]
             );
 
-            res.json({ message: '新增收藏成功', product: response_product, class: response_class });
-        } else {
-            res.json({ message: '已收藏過囉!' });
+            res.json({ message: '加入收藏', product: response_product, class: response_class });
         }
     } catch (err) {
-        res.status(404).json({ message: '收藏失敗單筆!' });
+        res.status(404).json({ message: '加入收藏失敗' });
         console.log('失敗了');
     }
 });
@@ -72,7 +70,7 @@ router.delete('/:id', async (req, res, next) => {
             [user_id]
         );
 
-        res.json({ message: '取消收藏成功', product: response_product, class: response_class });
+        res.json({ message: '取消收藏', product: response_product, class: response_class });
     } catch (err) {
         res.status(404).json({ message: '取消收藏失敗' });
     }
