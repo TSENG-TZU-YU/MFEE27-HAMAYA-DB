@@ -32,26 +32,23 @@ router.post('/', async (req, res, next) => {
             await pool.execute('INSERT INTO user_liked (user_id, product_id, category_id) VALUES (?, ?, ?)', [data[0].user_id, data[0].product_id, data[0].category_id]);
 
             // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
-            let [resProducts] = await pool.execute('SELECT * FROM user_liked WHERE user_id = ?', [data[0].user_id]);
-            res.json({ message: '新增收藏成功', resProducts });
+            let [response_product] = await pool.execute(
+                `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+                [data[0].user_id]
+            );
+
+            let [response_class] = await pool.execute(
+                `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+                [data[0].user_id]
+            );
+
+            res.json({ message: '新增收藏成功', product: response_product, class: response_class });
         } else {
             res.json({ message: '已收藏過囉!' });
         }
     } catch (err) {
         res.status(404).json({ message: '收藏失敗單筆!' });
         console.log('失敗了');
-    }
-});
-
-//  撈會員收藏商品 http://localhost:3001/api/member/mybucketlist/:id
-router.get('/:id', async (req, res, next) => {
-    const user_id = req.session.member.id;
-    console.log(user_id);
-    try {
-        let [products] = await pool.execute(`SELECT product_id FROM user_liked WHERE user_id = ?`, [user_id]);
-        res.json({ message: '收藏查詢成功', products });
-    } catch (err) {
-        res.status(404).json({ message: '收藏查詢失敗' });
     }
 });
 
@@ -63,15 +60,26 @@ router.delete('/:id', async (req, res, next) => {
     console.log(product_id);
     try {
         await pool.execute(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, [user_id, product_id]);
+
         // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
-        let [resProducts] = await pool.execute('SELECT * FROM user_liked WHERE user_id = ?', [user_id]);
-        res.json({ message: '取消收藏成功', resProducts });
+        let [response_product] = await pool.execute(
+            `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+            [user_id]
+        );
+
+        let [response_class] = await pool.execute(
+            `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+            [user_id]
+        );
+
+        res.json({ message: '取消收藏成功', product: response_product, class: response_class });
     } catch (err) {
         res.status(404).json({ message: '取消收藏失敗' });
     }
 });
 
 // 多筆 INSERT POST
+
 //查詢
 router.get('/:id', async (req, res, next) => {
     console.log('查詢bucket user_id req.params', req.params);
@@ -90,9 +98,10 @@ router.get('/:id', async (req, res, next) => {
     const response = response_product.concat(response_class);
     console.log('response', response);
     if (response) {
-        res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response });
+        res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response, product: response_product, class: response_class });
     } else {
         res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
     }
 });
+
 module.exports = router;
