@@ -40,12 +40,16 @@ router.get('/commonqa/detail', async (req, res, next) => {
 router.post('/commonqa/reply', async (req, res, next) => {
     console.log('reply commonqa');
     console.log('data:', req.body);
-    // console.log('name:', req.session.member.fullName);
-    // const qaid = req.query.qaid;
-    // if (!req.session.member) {
-    //     return res.status(401).json({ message: '已登出請重新登入' });
-    // }
 
+    //輸入內容不能為空
+    if (req.body.q_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
+    //更新回覆狀態
+    const now = new Date();
+    await pool.execute('UPDATE user_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE id=?', ['已回覆', '已回覆', now, req.body.user_qna_id]);
+
+    //新增對話
     let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [req.body.user_qna_id, '客服小編', req.body.q_content]);
 
     //請會員更新資料庫
@@ -103,10 +107,17 @@ router.post('/placeqa/reply', async (req, res, next) => {
     console.log('reply placeqa');
     console.log('data:', req.body);
 
+    //輸入內容不能為空
+    if (req.body.place_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
+
     let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [req.body.place_rt_id, '客服小編', req.body.place_content]);
 
+    const now = new Date();
+    await pool.execute('UPDATE venue_reservation SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE id=?', ['已回覆', '未回覆', now, req.body.place_rt_id]);
     //請會員更新資料庫
-    // req.app.io.emit(`userid${req.body.user_id}`, { MyQuestionDetail: true });
+    req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });

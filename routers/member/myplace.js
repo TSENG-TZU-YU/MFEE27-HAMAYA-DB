@@ -42,14 +42,21 @@ router.post('/reply', async (req, res, next) => {
     // if (!req.session.member) {
     //     return res.status(401).json({ message: '已登出請重新登入' });
     // }
+    //輸入內容不能為空
+    if (req.body.place_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
 
     let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [
         req.body.place_rt_id,
         req.session.member.fullName,
         req.body.place_content,
     ]);
+    const now = new Date();
+    await pool.execute('UPDATE venue_reservation SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE id=?', ['未回覆', '已回覆', now, req.body.place_rt_id]);
 
-    //請管理員更新資料庫
+    //請會員更新資料庫
+    req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
 
     res.json({ message: 'OK' });
 });
