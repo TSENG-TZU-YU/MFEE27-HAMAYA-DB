@@ -4,6 +4,7 @@ const pool = require('../utils/db');
 
 router.post('/rent', async (req, res, next) => {
     console.log('123', req.body);
+
     try {
         const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
         const renterros = {};
