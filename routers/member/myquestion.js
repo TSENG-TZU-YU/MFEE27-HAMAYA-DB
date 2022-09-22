@@ -83,11 +83,16 @@ router.post('/reply', async (req, res, next) => {
     console.log('reply myQuestion');
     console.log('body:', req.body);
     console.log('name:', req.session.member.fullName);
-    // const qaid = req.query.qaid;
-    // if (!req.session.member) {
-    //     return res.status(401).json({ message: '已登出請重新登入' });
-    // }
 
+    //輸入內容不能為空
+    if (req.body.q_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
+    //更新回覆狀態
+    const now = new Date();
+    await pool.execute('UPDATE user_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE id=?', ['新訊息', '未回覆', now, req.body.user_qna_id]);
+
+    //新增對話
     let [content] = await pool.execute('INSERT INTO user_qna_detail (user_qna_id, name, q_content) VALUES (?, ?, ?)', [
         req.body.user_qna_id,
         req.session.member.fullName,
