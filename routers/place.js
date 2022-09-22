@@ -6,9 +6,6 @@ router.post('/rent', async (req, res, next) => {
     console.log('123', req.body);
 
     try {
-        if (!req.session.member) {
-            return res.status(401).json({ message: '已登出請重新登入' });
-        }
         const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
         const renterros = {};
         if (req.body.fullName === '') {
