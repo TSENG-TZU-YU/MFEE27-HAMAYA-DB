@@ -5,11 +5,14 @@ const moment = require('moment');
 
 //成立訂單
 router.post('/', async (req, res, next) => {
-    // console.log('myorder 中間件', req.body);
+    console.log('myorder 中間件', req.body);
     const [data] = req.body;
     // console.log('data', data);
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
+    //優惠券
+    let coupon_id = data.coupon_id;
+    console.log('coupon_id', coupon_id, data.user_id);
     //郵遞區號
     let newDist = data.dist.split(',');
     let newAddress = newDist[0] + data.city + newDist[1] + data.address;
@@ -17,10 +20,14 @@ router.post('/', async (req, res, next) => {
     let momentTime = moment().format('YYYY-MM-DD HH:mm:ss');
     try {
         //存order_product order_finish先拿掉
-        await pool.execute(
-            `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, 9, data.total_amount, momentTime, 1]
-        );
+        try {
+            await pool.execute(
+                `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, coupon_id, data.total_amount, momentTime, 1]
+            );
+        } catch (err) {
+            res.status(404).json({ message: '新增訂單失敗' });
+        }
 
         //產品組陣列
         let filter_A = data.product_detail.filter((value) => {
@@ -38,14 +45,19 @@ router.post('/', async (req, res, next) => {
         let product_detailB = filter_B.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
         });
+        try {
+            //存detail
+            if (product_detailA.length !== 0) {
+                await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
+            }
 
-        //存detail
-        if (product_detailA.length !== 0) {
-            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
-        }
-
-        if (product_detailB.length !== 0) {
-            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [product_detailB]);
+            if (product_detailB.length !== 0) {
+                await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [
+                    product_detailB,
+                ]);
+            }
+        } catch (err) {
+            res.status(404).json({ message: '新增訂詳細失敗' });
         }
 
         let products_delete = data.product_detail.map((item) => {
@@ -53,13 +65,27 @@ router.post('/', async (req, res, next) => {
         });
 
         // console.log('刪除cart 產生訂單', products_delete);
-        //刪除在購物車的商品
-        for (let i = 0; i < products_delete.length; i++) {
-            await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
-            // console.log('deleteItemData', deleteItemData);
+        try {
+            //刪除在購物車的商品
+            for (let i = 0; i < products_delete.length; i++) {
+                await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
+                // console.log('deleteItemData', deleteItemData);
+            }
+        } catch (err) {
+            res.status(404).json({ message: '刪除購物車清單失敗' });
         }
 
-        res.json({ order_id: order_id, message: '訂單已成立，可以去會員專區 > 訂單查詢 查看，謝謝' });
+        //TODO:修改優惠券使用額度
+        // if (coupon_id != 0) {
+        //     try {
+        //         let updateCouponUse = await pool.execute('UPDATE coupon_detail SET use = ? WHERE user_id= ? AND coupon_id= ?', [0, coupon_id, data.user_id]);
+        //         console.log('updateCouponUse', updateCouponUse);
+        //     } catch (err) {
+        //         res.status(404).json({ message: '修改優惠券使用失敗' });
+        //     }
+        // }
+
+        res.json({ order_id: order_id, message: '訂單已成立' });
     } catch (err) {
         res.status(404).json({ message: '新增訂單失敗' });
     }
