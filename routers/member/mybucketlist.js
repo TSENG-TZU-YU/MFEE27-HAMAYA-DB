@@ -51,7 +51,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // 單筆 取消收藏 DELETE http://localhost:3001/api/member/mybucketlist/:id
-router.delete('/:id', async (req, res, next) => {
+router.delete('/', async (req, res, next) => {
     const user_id = req.session.member.id;
     const product_id = req.params.id;
     console.log(user_id);
@@ -76,6 +76,32 @@ router.delete('/:id', async (req, res, next) => {
     }
 });
 
+router.delete('/delete', async (req, res, next) => {
+    console.log('多筆移除收藏', req.body); //[ [ 2, 'B1' ], [ 2, 'B2' ] ]
+    const user_id = req.session.member.id;
+    // const product_id = req.params.id;
+    // console.log(user_id);
+    // console.log(product_id);
+    try {
+        for (let i = 0; i < req.body.length; i++) {
+            await pool.query(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, req.body[i]);
+        }
+        // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
+        let [response_product] = await pool.execute(
+            `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+            [user_id]
+        );
+
+        let [response_class] = await pool.execute(
+            `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+            [user_id]
+        );
+
+        res.json({ message: '取消收藏', product: response_product, class: response_class });
+    } catch (err) {
+        res.status(404).json({ message: '取消收藏失敗' });
+    }
+});
 // 多筆 INSERT POST
 
 //查詢

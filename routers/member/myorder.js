@@ -11,7 +11,7 @@ router.post('/', async (req, res, next) => {
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //優惠券
-    let coupon_id = data.coupon_id;
+    let coupon_id = Number(data.coupon_id);
     console.log('coupon_id', coupon_id, data.user_id);
     //郵遞區號
     let newDist = data.dist.split(',');
@@ -20,14 +20,11 @@ router.post('/', async (req, res, next) => {
     let momentTime = moment().format('YYYY-MM-DD HH:mm:ss');
     try {
         //存order_product order_finish先拿掉
-        try {
-            await pool.execute(
-                `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-                [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, coupon_id, data.total_amount, momentTime, 1]
-            );
-        } catch (err) {
-            res.status(404).json({ message: '新增訂單失敗' });
-        }
+        //產生訂單
+        await pool.execute(
+            `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, coupon_id, data.total_amount, momentTime, 1]
+        );
 
         //產品組陣列
         let filter_A = data.product_detail.filter((value) => {
@@ -45,19 +42,14 @@ router.post('/', async (req, res, next) => {
         let product_detailB = filter_B.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
         });
-        try {
-            //存detail
-            if (product_detailA.length !== 0) {
-                await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
-            }
 
-            if (product_detailB.length !== 0) {
-                await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [
-                    product_detailB,
-                ]);
-            }
-        } catch (err) {
-            res.status(404).json({ message: '新增訂詳細失敗' });
+        //存order_product_detail
+        if (product_detailA.length !== 0) {
+            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
+        }
+
+        if (product_detailB.length !== 0) {
+            await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, start_date, end_date, amount, price, valid) VALUES ?`, [product_detailB]);
         }
 
         let products_delete = data.product_detail.map((item) => {
@@ -65,25 +57,18 @@ router.post('/', async (req, res, next) => {
         });
 
         // console.log('刪除cart 產生訂單', products_delete);
-        try {
-            //刪除在購物車的商品
-            for (let i = 0; i < products_delete.length; i++) {
-                await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
-                // console.log('deleteItemData', deleteItemData);
-            }
-        } catch (err) {
-            res.status(404).json({ message: '刪除購物車清單失敗' });
+
+        //刪除在購物車的商品
+        for (let i = 0; i < products_delete.length; i++) {
+            await pool.query(`DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?)`, [data.user_id, products_delete[i]]);
+            // console.log('deleteItemData', deleteItemData);
         }
 
-        //TODO:修改優惠券使用額度
-        // if (coupon_id != 0) {
-        //     try {
-        //         let updateCouponUse = await pool.execute('UPDATE coupon_detail SET use = ? WHERE user_id= ? AND coupon_id= ?', [0, coupon_id, data.user_id]);
-        //         console.log('updateCouponUse', updateCouponUse);
-        //     } catch (err) {
-        //         res.status(404).json({ message: '修改優惠券使用失敗' });
-        //     }
-        // }
+        //修改優惠券use額度
+        if (coupon_id != 0) {
+            await pool.execute('UPDATE coupon_detail SET coupon_detail.use = 0 WHERE user_id= ? && coupon_id= ?', [data.user_id, data.coupon_id]);
+            // console.log('updateCouponUse', updateCouponUse);
+        }
 
         res.json({ order_id: order_id, message: '訂單已成立' });
     } catch (err) {
@@ -96,7 +81,6 @@ router.post('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
     // console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
-    // let [response] = await pool.execute(`SELECT * FROM order_product WHERE user_id=?`, [user_id]);
     try {
         let [response_product] = await pool.execute(
             `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
@@ -115,7 +99,8 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-//TODO:查detail時要比對連線這跟該資料使用id是否相同
+//查detail時要比對連線這跟該資料使用id是否相同
+//TODO:加入驗證session 取得id 就能用params
 // params: { order_id: 'A6542801' },
 // query: { user_id: '123', order_id: 'A123456' }
 router.get('/detail/:order_id', async (req, res, next) => {
