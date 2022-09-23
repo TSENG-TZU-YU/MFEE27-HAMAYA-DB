@@ -4,31 +4,25 @@ const pool = require('../utils/db');
 
 //撈出文章的id與種類 GET/news種類for前端的NEWs切換頁
 // http://localhost:3001/api/news?categoryId=4
-router.get('/article?', async (req, res, next) => {
+// TODO:更改到資料庫的日期時間，要提醒大家更改
+router.get('/', async (req, res, next) => {
     const categoryId = req.query.categoryId;
     if (categoryId) {
         let [data] = await pool.execute(
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=? ORDER BY article.creation_date DESC LIMIT 6`,
             [categoryId]
         );
-
         let [news] = await pool.execute(
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`,
             [categoryId]
         );
-        let [news2] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        let [news3] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=3 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        let [news4] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 1`,
-            [categoryId]
-        );
-        res.json({ data, news, news2, news3, news4 });
+        //TODO:抓到每個種類的最新一筆，但關聯不到種類名稱
+        // let [news2] = await pool.execute(
+        //     'SELECT * FROM article as t1 WHERE EXISTS (select article.category,max(creation_date) as article_category FROM article group by article.category having t1.category = article.category and t1.creation_date =max(creation_date)) ORDER BY creation_date DESC LIMIT 3',
+        //     [categoryId]
+        // );
+
+        res.json({ data, news });
         return;
     }
     let [data] = await pool.execute(
@@ -37,16 +31,7 @@ router.get('/article?', async (req, res, next) => {
     let [news] = await pool.execute(
         `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`
     );
-    let [news2] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=4 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    let [news3] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=3 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    let [news4] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 1`
-    );
-    res.json({ data, news, news2, news3, news4 });
+    res.json({ data, news });
 });
 
 // http://localhost:3001/api/news/section?categoryList=4

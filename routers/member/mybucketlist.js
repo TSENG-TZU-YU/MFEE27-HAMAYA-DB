@@ -10,91 +10,137 @@ router.post('/', async (req, res, next) => {
     //   product_id: , string
     //   category_id: , string
     // }]
-    console.log('收藏 中間件', req.body);
     const data = req.body;
-    console.log(data);
+    // 單筆
+    if (data.length === 1) {
+        try {
+            // 確認 product_id 是否存在
+            let [checkProductData] = await pool.execute(
+                'SELECT product.product_id FROM product WHERE product_id = ? UNION SELECT class.product_id FROM class WHERE product_id = ?',
+                [data[0].product_id, data[0].product_id]
+            );
+            // 不存在: 回給前端
+            if (checkProductData.length === 0) {
+                return res.json({ message: '查無此商品!' });
+            }
+            // 確認 是否有加入過收藏 liked
+            let [checkData] = await pool.execute('SELECT user_id, product_id FROM user_liked WHERE user_id = ? && product_id = ?', [data[0].user_id, data[0].product_id]);
+            // 沒有: 進行新增
+            if (checkData.length === 0) {
+                // 寫入 user_liked 資料表
+                await pool.execute('INSERT INTO user_liked (user_id, product_id, category_id) VALUES (?, ?, ?)', [data[0].user_id, data[0].product_id, data[0].category_id]);
 
-    try {
-        // 確認 product_id 是否存在
-        let [checkProductData] = await pool.execute('SELECT product.product_id FROM product WHERE product_id = ? UNION SELECT class.product_id FROM class WHERE product_id = ?', [
-            data[0].product_id,
-            data[0].product_id,
-        ]);
-        // 不存在: 回給前端
-        if (checkProductData.length === 0) {
-            return res.json({ message: '查無此商品!' });
+                // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
+                let [response_product] = await pool.execute(
+                    `SELECT user_liked.*, product.product_id, product.name, product.price, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
+                    [data[0].user_id]
+                );
+
+                let [response_class] = await pool.execute(
+                    `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
+                    [data[0].user_id]
+                );
+                res.json({ message: '加入收藏', product: response_product, class: response_class });
+            }
+        } catch (err) {
+            res.status(404).json({ message: '加入收藏失敗' });
         }
-        // 確認 是否有加入過收藏 liked
-        let [checkData] = await pool.execute('SELECT user_id, product_id FROM user_liked WHERE user_id = ? && product_id = ?', [data[0].user_id, data[0].product_id]);
-        // 沒有: 進行新增
-        if (checkData.length === 0) {
-            // 寫入 user_liked 資料表
-            await pool.execute('INSERT INTO user_liked (user_id, product_id, category_id) VALUES (?, ?, ?)', [data[0].user_id, data[0].product_id, data[0].category_id]);
-
+        return;
+    }
+    // 多筆
+    if (data.length > 1) {
+        try {
+            for (let i = 0; i < data.length; i++) {
+                // 確認 是否有加入過收藏 liked
+                let [checkData] = await pool.execute('SELECT user_id, product_id FROM user_liked WHERE user_id = ? && product_id = ?', [data[i].user_id, data[i].product_id]);
+                // 沒有: 進行新增
+                if (checkData.length === 0) {
+                    // 寫入 user_liked 資料表
+                    await pool.query('INSERT INTO user_liked (user_id, product_id, category_id) VALUES (?, ?, ?)', [data[0].user_id, data[i].product_id, data[i].category_id]);
+                }
+            }
             // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
             let [response_product] = await pool.execute(
-                `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+                `SELECT user_liked.*, product.product_id, product.name, product.price, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
                 [data[0].user_id]
             );
-
             let [response_class] = await pool.execute(
-                `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+                `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
                 [data[0].user_id]
             );
-
             res.json({ message: '加入收藏', product: response_product, class: response_class });
+        } catch (err) {
+            res.status(404).json({ message: '加入收藏失敗' });
         }
-    } catch (err) {
-        res.status(404).json({ message: '加入收藏失敗' });
-        console.log('失敗了');
     }
 });
 
-// 單筆 取消收藏 DELETE http://localhost:3001/api/member/mybucketlist/:id
-router.delete('/:id', async (req, res, next) => {
-    const user_id = req.session.member.id;
-    const product_id = req.params.id;
-    console.log(user_id);
-    console.log(product_id);
-    try {
-        await pool.execute(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, [user_id, product_id]);
+router.delete('/delete', async (req, res, next) => {
+    // data =[{
+    //   user_id: , number
+    //   product_id: , string
+    // }]
+    const data = req.body;
 
-        // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
-        let [response_product] = await pool.execute(
-            `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
-            [user_id]
-        );
-
-        let [response_class] = await pool.execute(
-            `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
-            [user_id]
-        );
-
-        res.json({ message: '取消收藏', product: response_product, class: response_class });
-    } catch (err) {
-        res.status(404).json({ message: '取消收藏失敗' });
+    // 單筆
+    if (data.length === 1) {
+        try {
+            await pool.query(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, [data[0].user_id, data[0].product_id]);
+            // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
+            let [response_product] = await pool.execute(
+                `SELECT user_liked.*, product.product_id, product.name, product.price, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
+                [data[0].user_id]
+            );
+            let [response_class] = await pool.execute(
+                `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
+                [data[0].user_id]
+            );
+            res.json({ message: '取消收藏', product: response_product, class: response_class });
+        } catch (err) {
+            res.status(404).json({ message: '取消收藏失敗' });
+        }
+        return;
+    }
+    // 多筆
+    if (data.length > 1) {
+        console.log('取消收藏', data);
+        try {
+            for (let i = 0; i < data.length; i++) {
+                await pool.query(`DELETE FROM user_liked WHERE user_id = ? && product_id = ?`, [data[i].user_id, data[i].product_id]);
+            }
+            // 再去拿一次資料回給前端 要放在愛心icon上 ui顯示已收藏
+            let [response_product] = await pool.execute(
+                `SELECT user_liked.*, product.product_id, product.name, product.price, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
+                [data[0].user_id]
+            );
+            let [response_class] = await pool.execute(
+                `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
+                [data[0].user_id]
+            );
+            res.json({ message: '取消收藏', product: response_product, class: response_class });
+        } catch (err) {
+            res.status(404).json({ message: '取消收藏失敗' });
+        }
     }
 });
-
-// 多筆 INSERT POST
 
 //查詢
 router.get('/:id', async (req, res, next) => {
-    console.log('查詢bucket user_id req.params', req.params);
+    // console.log('查詢bucket user_id req.params', req.params);
     // SELECT * FROM `user_liked` WHERE user_id = 2
     const user_id = req.params.id;
 
     let [response_product] = await pool.execute(
-        `SELECT user_liked.*, product.product_id,product.name,product.price,product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id= ?`,
+        `SELECT user_liked.*, product.product_id, product.name, product.price, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
         [user_id]
     );
 
     let [response_class] = await pool.execute(
-        `SELECT user_liked.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class.deadline,class.teacher,class.stock,class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id= ?`,
+        `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
         [user_id]
     );
     const response = response_product.concat(response_class);
-    console.log('response', response);
+    // console.log('response', response);
     if (response) {
         res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response, product: response_product, class: response_class });
     } else {
