@@ -4,6 +4,7 @@ const pool = require('../utils/db');
 
 //撈出文章的id與種類 GET/news種類for前端的NEWs切換頁
 // http://localhost:3001/api/news?categoryId=4
+// TODO:更改到資料庫的日期時間，要提醒大家更改
 router.get('/', async (req, res, next) => {
     const categoryId = req.query.categoryId;
     if (categoryId) {
@@ -15,6 +16,12 @@ router.get('/', async (req, res, next) => {
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`,
             [categoryId]
         );
+        //TODO:抓到每個種類的最新一筆，但關聯不到種類名稱
+        // let [news2] = await pool.execute(
+        //     'SELECT * FROM article as t1 WHERE EXISTS (select article.category,max(creation_date) as article_category FROM article group by article.category having t1.category = article.category and t1.creation_date =max(creation_date)) ORDER BY creation_date DESC LIMIT 3',
+        //     [categoryId]
+        // );
+
         res.json({ data, news });
         return;
     }
