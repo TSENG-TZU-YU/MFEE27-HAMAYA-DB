@@ -101,6 +101,7 @@ router.post('/reply', async (req, res, next) => {
 
     //請管理員更新資料庫
     req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
+    req.app.io.emit(`customer_List`, { newMessage: true });
     // req.app.io.emit(req.body.customer_id, { updateCommonQA: true });
     res.json({ message: 'OK' });
 });

@@ -5,6 +5,9 @@ const pool = require('../../utils/db');
 let customerserviceRouter = require('./customerservice');
 router.use('/customerservice', customerserviceRouter);
 
+let couponRouter = require('./coupon');
+router.use('/coupon', couponRouter);
+
 // let mybucketlistRouter = require('./mybucketlist');
 // router.use('/mybucketlist', mybucketlistRouter);
 
@@ -14,8 +17,6 @@ router.use('/customerservice', customerserviceRouter);
 // let myorderRouter = require('./myorder');
 // router.use('/myorder', myorderRouter);
 
-// let mycouponRouter = require('./mycoupon');
-// router.use('/mycoupon', mycouponRouter);
 
 // let myquestionRouter = require('./myquestion');
 // router.use('/myquestion', myquestionRouter);
