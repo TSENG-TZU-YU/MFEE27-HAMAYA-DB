@@ -63,7 +63,7 @@ router.get('/list/:classDetailID', async (req, res, next) => {
 
 // 列出老師 + 最新音樂文章
 router.get('/', async (req, res, next) => {
-    let [teacher] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id && valid=1 ORDER BY teacher.id DESC`);
+    let [teacher] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id && valid=1 ORDER BY teacher.id ASC`);
 
     // article、article_img、article_category  關聯
     let [article] = await pool.execute(
