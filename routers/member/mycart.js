@@ -50,7 +50,7 @@ router.post('/multi', async (req, res, next) => {
                 // console.log('saveItemData', saveItemData);
             }
         });
-        res.json({ message: '已成功加入購物車' });
+        res.json({ message: '成功加入購物車' });
     } catch (err) {
         res.status(404).json({ message: '新增失敗' });
     }
@@ -71,7 +71,7 @@ router.delete('/', async (req, res, next) => {
             let responseDelete = await pool.execute('DELETE FROM user_cart WHERE (user_id=?) AND (product_id=?);', newData);
 
             // console.log('responseDelete', responseDelete);
-            res.json({ user_id: newData[0], product_id: newData[1], message: '已成功刪除購物車內容' });
+            res.json({ user_id: newData[0], product_id: newData[1], message: '成功刪除購物車內容' });
         } catch (err) {
             res.status(404).json({ message: '刪除失敗' });
         }
@@ -86,7 +86,7 @@ router.delete('/', async (req, res, next) => {
                 product_id.push(newData[i][1]);
                 // console.log('deleteItemData', deleteItemData);
             }
-            res.json({ user_id: newData[0][0], product_id: product_id, message: '已成功刪除多筆購物車內容' });
+            res.json({ user_id: newData[0][0], product_id: product_id, message: '成功刪除多筆購物車內容' });
         } catch (err) {
             res.status(404).json({ message: '多筆刪除失敗' });
         }
