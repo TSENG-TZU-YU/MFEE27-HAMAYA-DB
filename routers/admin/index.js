@@ -8,6 +8,31 @@ router.use('/customerservice', customerserviceRouter);
 let couponRouter = require('./coupon');
 router.use('/coupon', couponRouter);
 
+let membersRouter = require('./members');
+router.use('/members', membersRouter);
+
+//登入驗證
+router.get('/', async (req, res, next) => {
+    console.log('admin check Login');
+    // console.log(req.session.admin);
+    if (!req.session.admin) {
+        return res.status(401).json({ message: '尚未登入' });
+    }
+
+    // 更新session
+    let [members] = await pool.execute('SELECT * FROM admin WHERE account = ?', [req.session.admin.account]);
+    let member = members[0];
+    let saveMember = {
+        id: member.id,
+        fullName: member.name,
+        account: member.account,
+        loginDt: new Date().toISOString(),
+    };
+    req.session.admin = saveMember;
+
+    res.json(saveMember);
+});
+
 // http://localhost:3001/api//admin/login
 router.post('/login', async (req, res, next) => {
     console.log('admin login');
@@ -35,9 +60,10 @@ router.post('/login', async (req, res, next) => {
         id: member.id,
         fullName: member.name,
         account: member.account,
+        loginDt: new Date().toISOString(),
     };
     // 把資料寫進 session 裡
-    req.session.member = saveMember;
+    req.session.admin = saveMember;
     console.log(req.session);
     // // 回覆前端登入成功
     res.json(saveMember);
@@ -48,7 +74,7 @@ router.post('/login', async (req, res, next) => {
 // http://localhost:3001/api//admin/logout
 router.get('/logout', (req, res, next) => {
     console.log('admin logout');
-    req.session.member = null;
+    req.session.admin = null;
     res.json({ message: '已登出' });
 });
 
