@@ -44,6 +44,11 @@ router.get('/:memberId', async (req, res, next) => {
         `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class.ins_main_id,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date < NOW() && order_product.user_id=? && order_product_detail.valid=1`,
         [memberId]
     );
+    // 會員平均評價 更新
+    await pool.execute(
+        `update class c join
+            (select product_id, avg(rating) as rating ,count(member_id) as member from order_product_detail d group by  product_id ) r on c. product_id = r. product_id set c.rating =r.rating , c.member = r.member`
+    );
 
     res.json({ buyClass, finishClass });
 });
