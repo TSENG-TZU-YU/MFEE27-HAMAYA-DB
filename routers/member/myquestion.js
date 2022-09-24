@@ -49,6 +49,8 @@ router.post('/add', async (req, res, next) => {
         req.body.comment,
     ]);
     console.log('result2', result2);
+
+    req.app.io.emit(`customer_List`, { newMessage: true });
     res.json({ message: '收到~小編會盡快回覆您的問題!!' });
 });
 
