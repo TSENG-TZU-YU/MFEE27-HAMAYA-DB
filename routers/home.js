@@ -16,7 +16,7 @@ router.get('/:content', async (req, res, next) => {
         [mainId]
     );
     //TODO:slider的api
-    //輪播資料
+    //輪播資料在這邊
     let [slider] = await pool.execute('SELECT article.id, article.category,article.creation_date,article.title FROM `article` WHERE category=1 LIMIT 2', [content]);
     res.json({ data, read, slider });
 });
