@@ -8,6 +8,9 @@ router.use('/customerservice', customerserviceRouter);
 let couponRouter = require('./coupon');
 router.use('/coupon', couponRouter);
 
+let membersRouter = require('./members');
+router.use('/members', membersRouter);
+
 //登入驗證
 router.get('/', async (req, res, next) => {
     console.log('admin check Login');
