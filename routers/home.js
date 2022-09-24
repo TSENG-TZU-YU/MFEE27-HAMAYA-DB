@@ -15,7 +15,8 @@ router.get('/:content', async (req, res, next) => {
         'SELECT article.*, article_category.id AS category, article_category.name AS articleName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=4 && valid = 1 ORDER BY RAND() LIMIT 2',
         [mainId]
     );
-    res.json({ data, read });
-    return;
+    //TODO:slider的api
+    let [slider] = await pool.execute('SELECT article.id, article.category,article.creation_date,article.title FROM `article` WHERE category=1 LIMIT 2', [content]);
+    res.json({ data, read, slider });
 });
 module.exports = router;
