@@ -16,13 +16,13 @@ router.get('/', async (req, res, next) => {
             `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`,
             [categoryId]
         );
-        //TODO:抓到每個種類的最新一筆，但關聯不到種類名稱
-        // let [news2] = await pool.execute(
-        //     'SELECT * FROM article as t1 WHERE EXISTS (select article.category,max(creation_date) as article_category FROM article group by article.category having t1.category = article.category and t1.creation_date =max(creation_date)) ORDER BY creation_date DESC LIMIT 3',
-        //     [categoryId]
-        // );
+        //抓到每個種類的筆數，用row_number()讓每個category依照時間擁有新的id,做出一個rws新表，再去join其他表
+        let [news2] = await pool.execute(
+            `with rws as ( select o.*, row_number() over ( partition by category order by creation_date desc ) rn from article o ) select rws.*, article_category.id AS categoryId, article_category.name from rws join article_category on rws.category = article_category.id where rn = 1 AND rws.category in (1,3,4)`,
+            [categoryId]
+        );
 
-        res.json({ data, news });
+        res.json({ data, news, news2 });
         return;
     }
     let [data] = await pool.execute(
@@ -31,7 +31,12 @@ router.get('/', async (req, res, next) => {
     let [news] = await pool.execute(
         `SELECT article.id, article.author, article.image, article.title, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=2 ORDER BY article.creation_date DESC LIMIT 1`
     );
-    res.json({ data, news });
+    //利用
+    let [news2] = await pool.execute(
+        `with rws as ( select o.*, row_number() over ( partition by category order by creation_date desc ) rn from article o ) select rws.*, article_category.id AS categoryId, article_category.name from rws join article_category on rws.category = article_category.id where rn = 1 AND rws.category in (1,3,4)`
+    );
+
+    res.json({ data, news, news2 });
 });
 
 // http://localhost:3001/api/news/section?categoryList=4
