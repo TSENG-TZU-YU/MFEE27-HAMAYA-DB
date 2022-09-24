@@ -14,12 +14,6 @@ router.get('/list?:category', async (req, res, next) => {
         classCategory,
     ]);
 
-    // 會員平均評價 更新
-    await pool.execute(
-        `update class c join
-        (select product_id, avg(rating) as rating ,count(member_id) as member from order_product_detail d group by  product_id ) r on c. product_id = r. product_id set c.rating =r.rating , c.member = r.member`
-    );
-
     // 把取得的資料回覆給前端
     res.json(data);
 });
@@ -57,6 +51,7 @@ router.get('/list/:classDetailID', async (req, res, next) => {
     await pool.execute(`select product_id, avg(rating) as rating,count(member_id) as member
     from order_product_detail d
     group by product_id`);
+
 
     res.json({ data, dataImg, recommendClass, evaluation, avg });
 });
