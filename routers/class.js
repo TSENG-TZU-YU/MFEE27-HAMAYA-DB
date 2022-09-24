@@ -13,9 +13,12 @@ router.get('/list?:category', async (req, res, next) => {
     let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE  class.ins_main_id=? && valid=1  `, [
         classCategory,
     ]);
+    let [maxPrice] = await pool.execute(`SELECT MAX(price) AS maxPrice From class WHERE valid=1 GROUP BY ins_main_id `);
+
+    let [minPrice] = await pool.execute(`SELECT MIN(price) AS minPrice From class WHERE valid=1 GROUP BY ins_main_id `);
 
     // 把取得的資料回覆給前端
-    res.json(data);
+    res.json({ data, maxPrice, minPrice });
 });
 
 // 列出某個課程 +  取得會員評價
@@ -51,7 +54,6 @@ router.get('/list/:classDetailID', async (req, res, next) => {
     await pool.execute(`select product_id, avg(rating) as rating,count(member_id) as member
     from order_product_detail d
     group by product_id`);
-
 
     res.json({ data, dataImg, recommendClass, evaluation, avg });
 });
