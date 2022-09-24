@@ -12,38 +12,104 @@ router.post('/', async (req, res, next) => {
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //優惠券
     let coupon_id = Number(data.coupon_id);
-    console.log('coupon_id', coupon_id, data.user_id);
+    console.log('coupon_id', data.coupon_id, data.user_id);
     //郵遞區號
     let newDist = data.dist.split(',');
     let newAddress = newDist[0] + data.city + newDist[1] + data.address;
     //當前時間
     let momentTime = moment().format('YYYY-MM-DD HH:mm:ss');
+    // let noStock;
     try {
-        //存order_product order_finish先拿掉
+        //產品組陣列
+        let filter_A = data.product_detail.filter((value) => {
+            return value.category_id === 'A';
+        });
+        let filter_B = data.product_detail.filter((value) => {
+            return value.category_id === 'B';
+        });
+        let product_id = filter_A.map((item) => {
+            return [item.product_id, item.amount];
+        });
+        // console.log('product_id', product_id);
+        let class_id = filter_B.map((item) => {
+            return [item.product_id, item.amount];
+        });
+        // console.log('class_id', class_id);
+        //確認庫存cate A
+        let product_detailA;
+        let noStockProduct_detailA;
+        if (product_id.length !== 0) {
+            let enoughStock = [];
+            for (let i = 0; i < product_id.length; i++) {
+                let [productStock] = await pool.execute('SELECT stock, product_id FROM product WHERE product_id = ?', [product_id[i][0]]);
+                console.log('productStock', productStock);
+                //庫存大於購買數量
+                if (productStock[0].stock > product_id[i][1]) {
+                    enoughStock.push(productStock[0].product_id);
+                }
+            }
+            console.log('enoughStockA', enoughStock);
+            let newFilter_A = filter_A.filter((item) => {
+                return enoughStock.indexOf(item.product_id) !== -1;
+            });
+            let noStockA = filter_A.filter((item) => {
+                return enoughStock.indexOf(item.product_id) === -1;
+            });
+            console.log('noStockA', noStockA);
+            //庫存不足[ [ 'B1', '成人薩克斯風課程A' ] ]
+            if (noStockA) {
+                noStockProduct_detailA = noStockA.map((item) => {
+                    return [item.name];
+                });
+                console.log('noStockProduct_detailA', noStockProduct_detailA);
+                return res.json({ noStock: noStockProduct_detailA, message: '暫無庫存' });
+            }
+            product_detailA = newFilter_A.map((item) => {
+                return [order_id, item.product_id, item.category_id, item.name, item.amount, item.price, 1];
+            });
+        }
+
+        //確認庫存cate B
+        let product_detailB;
+        let noStockProduct_detailB;
+        if (class_id.length !== 0) {
+            let enoughStock = [];
+            for (let i = 0; i < class_id.length; i++) {
+                let [classStock] = await pool.execute('SELECT stock, product_id FROM class WHERE product_id = ?', [class_id[i][0]]);
+                console.log('classStock', classStock);
+                //庫存大於購買數量
+                if (classStock[0].stock > class_id[i][1]) {
+                    enoughStock.push(classStock[0].product_id);
+                }
+            }
+            // console.log('enoughStockB', enoughStock);
+            let newFilter_B = filter_B.filter((item) => {
+                return enoughStock.indexOf(item.product_id) !== -1;
+            });
+            let noStockB = filter_B.filter((item) => {
+                return enoughStock.indexOf(item.product_id) === -1;
+            });
+            // console.log('noStockB', noStockB);
+            //庫存不足[ [ 'B1', '成人薩克斯風課程A' ] ]
+            if (noStockB) {
+                noStockProduct_detailB = noStockB.map((item) => {
+                    return [item.name];
+                });
+                return res.json({ noStock: noStockProduct_detailB, message: '已額滿' });
+                // console.log('noStockProduct_detailB', noStockProduct_detailB);
+            }
+            product_detailB = newFilter_B.map((item) => {
+                return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
+            });
+        }
+
         //產生訂單
         await pool.execute(
             `INSERT INTO order_product (order_id, user_id, receiver, phone, freight, shipment, address, pay_method, pay_state,pay_time, order_state, coupon_id, total_amount,create_time, valid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, coupon_id, data.total_amount, momentTime, 1]
         );
 
-        //產品組陣列
-        let filter_A = data.product_detail.filter((value) => {
-            return value.category_id === 'A';
-        });
-
-        let product_detailA = filter_A.map((item) => {
-            return [order_id, item.product_id, item.category_id, item.name, item.amount, item.price, 1];
-        });
-
-        let filter_B = data.product_detail.filter((value) => {
-            return value.category_id === 'B';
-        });
-
-        let product_detailB = filter_B.map((item) => {
-            return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
-        });
-
-        //存order_product_detail
+        //存order_product_detail //TODO:庫存足夠要扣庫存
         if (product_detailA.length !== 0) {
             await pool.query(`INSERT INTO order_product_detail (order_id, product_id, category_id, name, amount, price, valid) VALUES ?`, [product_detailA]);
         }
@@ -76,18 +142,17 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-//SELECT * FROM `order_product` WHERE user_id=2
 //查詢訂單
 router.get('/:id', async (req, res, next) => {
     // console.log('查詢user_id req.params', req.params);
     const user_id = req.params.id;
     try {
         let [response_product] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,product_img.image FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
+            `SELECT order_product.*, order_product_detail.category_id,product_img.image, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
             [user_id]
         );
         let [response_class] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1 FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
+            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
             [user_id]
         );
         const response = response_product.concat(response_class);
@@ -99,18 +164,23 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-//查detail時要比對連線這跟該資料使用id是否相同
-//TODO:加入驗證session 取得id 就能用params
-// params: { order_id: 'A6542801' },
-// query: { user_id: '123', order_id: 'A123456' }
+//加入驗證session 取得id 就能用params
 router.get('/detail/:order_id', async (req, res, next) => {
-    // console.log('查詢order_id req.params', req);
+    // console.log('查詢order_id req.params', req.params, req.query.user_id);
     //取得user_id判斷此訂單是否為該使用者輸入
+    console.log('req.session.member', req.session.member);
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
     const user_id = req.query.user_id;
-    const order_id = req.query.order_id;
+    const order_id = req.params.order_id;
+
     try {
         //使用者資訊
-        let [response_userInfo] = await pool.execute(`SELECT * FROM order_product WHERE order_id= ? AND user_id = ?`, [order_id, user_id]);
+        let [response_userInfo] = await pool.execute(
+            `SELECT order_product.*, coupon.name AS coupon_name,coupon.discount FROM order_product LEFT JOIN coupon ON order_product.coupon_id = coupon.id WHERE order_id= ? AND user_id = ?`,
+            [order_id, user_id]
+        );
 
         console.log('response_userInfo', response_userInfo);
 
