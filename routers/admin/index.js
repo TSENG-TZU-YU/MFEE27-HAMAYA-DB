@@ -8,6 +8,9 @@ router.use('/customerservice', customerserviceRouter);
 let couponRouter = require('./coupon');
 router.use('/coupon', couponRouter);
 
+let membersRouter = require('./members');
+router.use('/members', membersRouter);
+
 // http://localhost:3001/api//admin/login
 router.post('/login', async (req, res, next) => {
     console.log('admin login');
