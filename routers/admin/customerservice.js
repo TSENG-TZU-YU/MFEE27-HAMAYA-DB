@@ -9,9 +9,6 @@ router.get('/commonqa/loading', async (req, res, next) => {
     let [commonqa] = await pool.execute(
         'SELECT user_qna.*, user_q_category.name AS user_q_category  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id ORDER BY create_time DESC'
     );
-    // io.on('connection', (socket) => {
-    //     socket.emit(`userid${req.data.id}`, '連線成功');
-    // });
     res.json(commonqa);
 });
 //一般問答 詳細
@@ -26,16 +23,12 @@ router.get('/commonqa/detail', async (req, res, next) => {
     );
     let detail = myQuestionDetailArray[0];
 
-    // if (!myQuestionDetailArray) {
-    //     return res.status(401).json({ message: '僅能查看本人詳細問答' });
-    // }
-
     let [content] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [nlid]);
 
     res.json({ detail, content });
 });
 
-////一般問答 新增回覆
+//一般問答 新增回覆
 //http://localhost:3001/api/admin/customerservice/commonqa/reply
 router.post('/commonqa/reply', async (req, res, next) => {
     console.log('reply commonqa');
@@ -59,21 +52,53 @@ router.post('/commonqa/reply', async (req, res, next) => {
 });
 
 //訂單問答
+//http://localhost:3001/api/admin/customerservice/orderqa/loading
 router.get('/orderqa/loading', async (req, res, next) => {
     console.log('loading orderqa');
-    console.log(req.session.member.id);
-    let [myPlace] = await pool.execute('SELECT * FROM `venue_reservation` WHERE user_id=? ORDER BY create_time DESC ', [req.session.member.id]);
-
-    res.json(myPlace);
+    let [orderqa] = await pool.execute(
+        'SELECT order_qna.*, order_q_category.name AS q_category ,users.email ,users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id ORDER BY create_time DESC'
+    );
+    res.json(orderqa);
 });
+//訂單問答 詳細
+//http://localhost:3001/api/admin/customerservice/orderqa/detail?orid=${data.id}
 router.get('/orderqa/detail', async (req, res, next) => {
     console.log('loading orderqa detail');
     const orid = req.query.orid;
-    console.log(req.session.member.id);
-    let [myPlace] = await pool.execute('SELECT * FROM `venue_reservation` WHERE user_id=? ORDER BY create_time DESC ', [req.session.member.id]);
 
-    res.json(myPlace);
+    let [myQuestionDetailArray] = await pool.execute(
+        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
+        [orid]
+    );
+    let detail = myQuestionDetailArray[0];
+
+    let [content] = await pool.execute('SELECT * FROM order_qna_detail WHERE order_id=?', [orid]);
+    // console.log({ detail, content });
+    res.json({ detail, content });
 });
+//訂單問答 新增回覆
+//http://localhost:3001/api/admin/customerservice/commonqa/reply
+router.post('/orderqa/reply', async (req, res, next) => {
+    console.log('reply orderqa');
+    console.log('data:', req.body);
+
+    //輸入內容不能為空
+    if (req.body.q_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
+    //更新回覆狀態
+    const now = new Date();
+    await pool.execute('UPDATE order_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE order_id=?', ['已回覆', '已回覆', now, req.body.order_id]);
+
+    //新增對話
+    let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [req.body.order_id, '客服小編', req.body.q_content]);
+
+    //請會員更新資料庫
+    req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
+
+    res.json({ message: 'OK' });
+});
+
 
 //場地問答
 router.get('/placeqa/loading', async (req, res, next) => {

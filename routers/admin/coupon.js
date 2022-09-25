@@ -16,18 +16,15 @@ router.get('/loading', async (req, res, next) => {
 //http://localhost:3001/api/admin/coupon/detail?cpid=${data.id}
 router.get('/detail', async (req, res, next) => {
     console.log('loading coupon detail');
-    const nlid = req.query.nlid;
+    const cpid = req.query.cpid;
 
-    let [myQuestionDetailArray] = await pool.execute(
-        'SELECT user_qna.*, user_q_category.name AS user_q_category  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id WHERE user_qna.id=?',
-        [nlid]
+    let [myCouponDetailArray] = await pool.execute('SELECT * FROM coupon WHERE id=?', [cpid]);
+    let detail = myCouponDetailArray[0];
+
+    let [content] = await pool.execute(
+        'SELECT coupon_detail.* ,users.email ,users.name FROM coupon_detail JOIN users ON coupon_detail.user_id = users.id WHERE coupon_detail.coupon_id=?',
+        [cpid]
     );
-    let detail = myQuestionDetailArray[0];
-
-    // if (!myQuestionDetailArray) {
-    //     return res.status(401).json({ message: '僅能查看本人詳細問答' });
-    // }
-    let [content] = await pool.execute('SELECT * FROM user_qna_detail WHERE user_qna_id=?', [nlid]);
 
     res.json({ detail, content });
 });

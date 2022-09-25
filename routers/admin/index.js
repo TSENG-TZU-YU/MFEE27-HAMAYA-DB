@@ -11,6 +11,9 @@ router.use('/coupon', couponRouter);
 let membersRouter = require('./members');
 router.use('/members', membersRouter);
 
+let orderRouter = require('./order');
+router.use('/order', orderRouter);
+
 //登入驗證
 router.get('/', async (req, res, next) => {
     console.log('admin check Login');
