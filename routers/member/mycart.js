@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../../utils/db');
 
 //單筆 INSERT http://localhost:3001/api/member/mycart
-router.post('/', async (req, res, next) => {
+router.post('/single', async (req, res, next) => {
     // console.log('cart 中間件', req.body);
     const [data] = req.body;
     try {

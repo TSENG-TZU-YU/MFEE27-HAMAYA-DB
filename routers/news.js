@@ -40,7 +40,8 @@ router.get('/', async (req, res, next) => {
 });
 
 // http://localhost:3001/api/news/section?categoryList=4
-// TODO:要將categoryid與articleid改名
+// 要categoryid與articleid改名
+//MusicArticle的api
 router.get('/section', async (req, res, next) => {
     console.log('section', req);
     const categoryList = req.query.categoryList;
@@ -49,27 +50,18 @@ router.get('/section', async (req, res, next) => {
     // if有category這個變數就跑以下第一支api
     if (categoryList !== 'null') {
         let [data] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.content, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=? ORDER BY article.creation_date DESC LIMIT 2`,
+            `SELECT article.id, article.author, article.image, article.title, article.content, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=? ORDER BY article.creation_date`,
             [categoryList]
         );
 
-        let [SmallArticles] = await pool.execute(
-            `SELECT article.id, article.author, article.image, article.title, article.content, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=? ORDER BY article.creation_date DESC LIMIT 30 OFFSET 2`,
-            [categoryList]
-        );
-
-        res.json({ data, SmallArticles });
+        res.json({ data });
         return;
     }
     let [data] = await pool.execute(
         `SELECT article.id, article.author, article.image, article.title, article.content, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 2`
     );
 
-    let [SmallArticles] = await pool.execute(
-        `SELECT article.id, article.author, article.image, article.title, article.content, article.creation_date, article_category.id AS categoryId, article_category.name As categoryName FROM article JOIN article_category ON article.category=article_category.id WHERE article.category=1 ORDER BY article.creation_date DESC LIMIT 30 OFFSET 2`
-    );
-
-    res.json({ data, SmallArticles });
+    res.json({ data });
 });
 
 // http://localhost:3001/api/news/21?mainId=3
