@@ -12,7 +12,6 @@ router.post('/', async (req, res, next) => {
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //優惠券
     let coupon_id = Number(data.coupon_id);
-    // console.log('coupon_id', data.coupon_id, data.user_id);
     //郵遞區號
     let newDist = data.dist.split(',');
     let newAddress = newDist[0] + data.city + newDist[1] + data.address;
@@ -48,10 +47,10 @@ router.post('/', async (req, res, next) => {
             if (productStock[0].stock >= product_id[i][1]) {
                 let newStock = Number(productStock[0].stock) - Number(product_id[i][1]);
                 enoughStockA.push(productStock[0].product_id);
-                otherStockA.push(newStock, productStock[0].product_id);
+                otherStockA.push([newStock, productStock[0].product_id]);
             }
         }
-        // console.log('enoughStockA', enoughStock);
+        // console.log('otherStockA', otherStockA);
         newFilter_A = filter_A.filter((item) => {
             return enoughStockA.indexOf(item.product_id) !== -1;
         });
@@ -91,7 +90,7 @@ router.post('/', async (req, res, next) => {
                 otherStockB.push([newStock, classStock[0].product_id]);
             }
         }
-        console.log('otherStockB', otherStockB);
+        // console.log('otherStockB', otherStockB);
         newFilter_B = filter_B.filter((item) => {
             return enoughStockB.indexOf(item.product_id) !== -1;
         });
@@ -126,9 +125,8 @@ router.post('/', async (req, res, next) => {
             await pool.query('INSERT INTO `order_product_detail`(`order_id`, `product_id`, `category_id`, `name`, `amount`, `price`, `valid`) VALUES ?', [product_detailA]);
 
             //修改庫存
-            for (let i = 0; i < otherStockB.length; i++) {
-                let aaa = await pool.query('UPDATE product SET product.stock = ? WHERE product_id = ?', [otherStockA[i][0], otherStockA[i][1]]);
-                console.log('aaa', aaa);
+            for (let i = 0; i < otherStockA.length; i++) {
+                await pool.query('UPDATE product SET product.stock = ? WHERE product_id = ?', [otherStockA[i][0], otherStockA[i][1]]);
             }
         }
 
@@ -137,8 +135,7 @@ router.post('/', async (req, res, next) => {
 
             //修改庫存
             for (let i = 0; i < otherStockB.length; i++) {
-                let bbb = await pool.query('UPDATE class SET class.stock = ? WHERE product_id = ?', [otherStockB[i][0], otherStockB[i][1]]);
-                console.log('bbb', bbb);
+                await pool.query('UPDATE class SET class.stock = ? WHERE product_id = ?', [otherStockB[i][0], otherStockB[i][1]]);
             }
         }
 
@@ -179,7 +176,7 @@ router.get('/:id', async (req, res, next) => {
             [user_id]
         );
         const response = response_product.concat(response_class);
-        console.log(response);
+        // console.log(response);
 
         res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
     } catch (err) {
@@ -191,7 +188,7 @@ router.get('/:id', async (req, res, next) => {
 router.get('/detail/:order_id', async (req, res, next) => {
     // console.log('查詢order_id req.params', req.params, req.query.user_id);
     //取得user_id判斷此訂單是否為該使用者輸入
-    console.log('req.session.member', req.session.member);
+    // console.log('req.session.member', req.session.member);
     if (!req.session.member) {
         return res.status(401).json({ message: '已登出請重新登入' });
     }
@@ -205,7 +202,7 @@ router.get('/detail/:order_id', async (req, res, next) => {
             [order_id, user_id]
         );
 
-        console.log('response_userInfo', response_userInfo);
+        // console.log('response_userInfo', response_userInfo);
 
         //使用者購買清單
         let [response_orderListA] = await pool.execute(
