@@ -7,11 +7,13 @@ const pool = require('../utils/db');
 router.get('/category', async (req, res) => {
     try {
         // 商品類別 - 次類別
+        let [categoryMain] = await pool.execute('SELECT * FROM product_ins_main');
+        // 商品類別 - 主類別
         let [categorySub] = await pool.execute(
             'SELECT product_category.ins_main AS mainId, product_ins_sub.id AS subId, product_ins_sub.name AS subName FROM product_category INNER JOIN product_ins_sub ON product_ins_sub.id = product_category.ins_sub'
         );
-     
-        res.json({ categorySub });
+
+        res.json({ categoryMain, categorySub });
     } catch (err) {
         res.status(404).json({ err: err });
     }
