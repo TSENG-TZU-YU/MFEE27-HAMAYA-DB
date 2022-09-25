@@ -27,7 +27,7 @@ io.on('connection', (socket) => {
     });
     //會員連線
     socket.on('user_conn', (data) => {
-        console.log('使用者連線', data );
+        console.log('使用者連線', data);
         socket.emit(`userid2`, '連線成功');
     });
     //管理員連線
