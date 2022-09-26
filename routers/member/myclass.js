@@ -9,7 +9,11 @@ router.patch('/', async (req, res, next) => {
 
     try {
         // 是否有重複
-        let [checkData] = await pool.execute('SELECT * FROM order_product_detail WHERE product_id = ? && member_id = ? ', [data.classProduct, data.memberID]);
+        let [checkData] = await pool.execute('SELECT * FROM order_product_detail WHERE order_id=? && product_id = ? && member_id = ? ', [
+            data.order,
+            data.classProduct,
+            data.memberID,
+        ]);
 
         // 沒有重複才能新增
         if (checkData.length === 0) {
@@ -41,7 +45,7 @@ router.get('/:memberId', async (req, res, next) => {
     );
     // 已完成課程
     let [finishClass] = await pool.execute(
-        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class.ins_main_id,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date < NOW() && order_product.user_id=? && order_product_detail.valid=1`,
+        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class.ins_main_id,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date < NOW() && order_product.user_id=? && order_product_detail.valid=1 `,
         [memberId]
     );
     // 會員平均評價 更新
