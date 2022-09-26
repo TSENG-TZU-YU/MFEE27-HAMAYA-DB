@@ -9,7 +9,7 @@ router.post('/', async (req, res, next) => {
     const [data] = req.body;
     console.log('data', data);
     //產生訂單編號
-    let order_id = 'A' + parseInt(Date.now() % 10000000);
+    let order_id = 'A' + parseInt(Date.now() / 10000);
     //優惠券
     let coupon_id = Number(data.coupon_id);
     //郵遞區號
@@ -18,18 +18,20 @@ router.post('/', async (req, res, next) => {
     //當前時間
     let momentTime = moment().format('YYYY-MM-DD HH:mm:ss');
 
-    //產品列表組陣列
-    let filter_A = data.product_detail.filter((value) => {
+    //過濾分類
+    let A = data.product_detail.filter((value) => {
         return value.category_id === 'A';
     });
-    let filter_B = data.product_detail.filter((value) => {
+    let B = data.product_detail.filter((value) => {
         return value.category_id === 'B';
     });
-    let product_id = filter_A.map((item) => {
+    //只取商品編號及數量
+    let product_id = A.map((item) => {
         return [item.product_id, item.amount];
     });
-    console.log('product_id', product_id);
-    let class_id = filter_B.map((item) => {
+    // console.log('product_id', product_id);
+    //只取商品編號及數量
+    let class_id = B.map((item) => {
         return [item.product_id, item.amount];
     });
     // console.log('class_id', class_id);
@@ -38,7 +40,7 @@ router.post('/', async (req, res, next) => {
     let noStockProduct_detailA;
     let enoughStockA = [];
     let otherStockA = [];
-    let newFilter_A;
+    let newA;
     if (product_id.length !== 0) {
         for (let i = 0; i < product_id.length; i++) {
             let [productStock] = await pool.execute('SELECT stock, product_id FROM product WHERE product_id = ?', [product_id[i][0]]);
@@ -51,10 +53,10 @@ router.post('/', async (req, res, next) => {
             }
         }
         // console.log('otherStockA', otherStockA);
-        newFilter_A = filter_A.filter((item) => {
+        newA = A.filter((item) => {
             return enoughStockA.indexOf(item.product_id) !== -1;
         });
-        let noStockA = filter_A.filter((item) => {
+        let noStockA = A.filter((item) => {
             return enoughStockA.indexOf(item.product_id) === -1;
         });
         // console.log('noStockA', noStockA);
@@ -67,7 +69,7 @@ router.post('/', async (req, res, next) => {
             return res.json({ noStock: noStockProduct_detailA, message: '暫無庫存' });
         }
         //庫存充足 這裡會在擋一次數量為0商品 (數量為零卻未刪除的情況)
-        let amountNoZero = newFilter_A.filter((v) => {
+        let amountNoZero = newA.filter((v) => {
             return v.amount !== 0;
         });
         product_detailA = amountNoZero.map((item) => {
@@ -81,7 +83,7 @@ router.post('/', async (req, res, next) => {
     let noStockProduct_detailB;
     let enoughStockB = [];
     let otherStockB = [];
-    let newFilter_B;
+    let newB;
     if (class_id.length !== 0) {
         for (let i = 0; i < class_id.length; i++) {
             let [classStock] = await pool.execute('SELECT stock, product_id FROM class WHERE product_id = ?', [class_id[i][0]]);
@@ -95,14 +97,12 @@ router.post('/', async (req, res, next) => {
             }
         }
         // console.log('otherStockB', otherStockB);
-        newFilter_B = filter_B.filter((item) => {
+        newB = B.filter((item) => {
             return enoughStockB.indexOf(item.product_id) !== -1;
         });
-        let noStockB = filter_B.filter((item) => {
+        let noStockB = B.filter((item) => {
             return enoughStockB.indexOf(item.product_id) === -1;
         });
-        // console.log('newFilter_B', newFilter_B);
-        // console.log('noStockB', noStockB.length, newFilter_B.length);
         //庫存不足
         if (noStockB.length !== 0) {
             noStockProduct_detailB = noStockB.map((item) => {
@@ -112,7 +112,7 @@ router.post('/', async (req, res, next) => {
             return res.json({ noStock: noStockProduct_detailB, message: '已額滿' });
         }
         //庫存充足 這裡會在擋一次數量為0商品 (數量為零卻未刪除的情況)
-        let amountNoZero = newFilter_B.filter((v) => {
+        let amountNoZero = newB.filter((v) => {
             return v.amount !== 0;
         });
         product_detailB = amountNoZero.map((item) => {
