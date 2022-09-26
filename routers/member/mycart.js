@@ -20,7 +20,7 @@ router.post('/single', async (req, res, next) => {
             res.json({ message: '成功加入購物車' });
         } else {
             //訊息為臨時購物車關閉,加入購物車出現的訊息
-            res.json({ duplicate: 1, message: '已加入購物車，可以去會員購物車修改數量' });
+            res.json({ duplicate: 1, message: '已加入購物車，請去會員購物車修改數量' });
         }
     } catch (err) {
         res.status(404).json({ message: '新增失敗單筆' });
@@ -101,7 +101,7 @@ router.get('/:id', async (req, res, next) => {
     try {
         //product
         let [response_product] = await pool.execute(
-            `SELECT user_cart.*, product.product_id,product.name,product.price, product.stock,brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
+            `SELECT user_cart.*, product.product_id,product.name,product.price,product.ins_main_id, product.stock, brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
             [user_id]
         );
         //class
