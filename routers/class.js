@@ -77,9 +77,9 @@ router.get('/', async (req, res, next) => {
 router.get('/teacher/:teacherDetailID', async (req, res, next) => {
     const teacherDetailID = req.params.teacherDetailID;
     console.log('teacherDetailID', teacherDetailID);
-    let [data] = await pool.execute(`SELECT * FROM teacher WHERE  teacher.id=?  `, [teacherDetailID]);
-
-    res.json(data);
+    let [data] = await pool.execute(`SELECT *  FROM teacher  WHERE  teacher.id=?  `, [teacherDetailID]);
+    let [classTeacher] = await pool.execute(`SELECT class.name,teacher.id FROM class JOIN teacher ON  class.teacher=teacher.name WHERE teacher.id =? `, [teacherDetailID]);
+    res.json({ data, classTeacher });
 });
 
 // 匯出
