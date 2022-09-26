@@ -5,9 +5,9 @@ const moment = require('moment');
 
 //成立訂單
 router.post('/', async (req, res, next) => {
-    // console.log('myorder 中間件', req.body);
+    console.log('myorder 中間件', req.body);
     const [data] = req.body;
-    // console.log('data', data);
+    console.log('data', data);
     //產生訂單編號
     let order_id = 'A' + parseInt(Date.now() % 10000000);
     //優惠券
@@ -28,7 +28,7 @@ router.post('/', async (req, res, next) => {
     let product_id = filter_A.map((item) => {
         return [item.product_id, item.amount];
     });
-    // console.log('product_id', product_id);
+    console.log('product_id', product_id);
     let class_id = filter_B.map((item) => {
         return [item.product_id, item.amount];
     });
@@ -66,10 +66,14 @@ router.post('/', async (req, res, next) => {
             // console.log('noStockProduct_detailA', noStockProduct_detailA);
             return res.json({ noStock: noStockProduct_detailA, message: '暫無庫存' });
         }
-        //庫存充足
-        product_detailA = newFilter_A.map((item) => {
+        //庫存充足 這裡會在擋一次數量為0商品 (數量為零卻未刪除的情況)
+        let amountNoZero = newFilter_A.filter((v) => {
+            return v.amount !== 0;
+        });
+        product_detailA = amountNoZero.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.amount, item.price, 1];
         });
+        // console.log('product_detailA', product_detailA);
     }
 
     //確認庫存cate B
@@ -107,8 +111,11 @@ router.post('/', async (req, res, next) => {
             // console.log('noStockProduct_detailB', noStockProduct_detailB);
             return res.json({ noStock: noStockProduct_detailB, message: '已額滿' });
         }
-        //庫存充足
-        product_detailB = newFilter_B.map((item) => {
+        //庫存充足 這裡會在擋一次數量為0商品 (數量為零卻未刪除的情況)
+        let amountNoZero = newFilter_B.filter((v) => {
+            return v.amount !== 0;
+        });
+        product_detailB = amountNoZero.map((item) => {
             return [order_id, item.product_id, item.category_id, item.name, item.start_date, item.end_date, item.amount, item.price, 1];
         });
     }
@@ -120,7 +127,7 @@ router.post('/', async (req, res, next) => {
             [order_id, data.user_id, data.receiver, data.phone, data.freight, 1, newAddress, data.pay_method, 1, momentTime, 1, coupon_id, data.total_amount, momentTime, 1]
         );
 
-        //存order_product_detail //TODO:庫存足夠要扣庫存
+        //存order_product_detail
         if (Array.isArray(product_detailA)) {
             await pool.query('INSERT INTO `order_product_detail`(`order_id`, `product_id`, `category_id`, `name`, `amount`, `price`, `valid`) VALUES ?', [product_detailA]);
 
@@ -143,7 +150,7 @@ router.post('/', async (req, res, next) => {
             return [item.product_id];
         });
 
-        // console.log('刪除cart 產生訂單', products_delete);
+        console.log('刪除cart 產生訂單', products_delete);
 
         //刪除在購物車的商品
         for (let i = 0; i < products_delete.length; i++) {
@@ -184,9 +191,9 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-//加入驗證session 取得id 就能用params
+//查詢訂單詳細
 router.get('/detail/:order_id', async (req, res, next) => {
-    // console.log('查詢order_id req.params', req.params, req.query.user_id);
+    console.log('查詢order_id req.params', req.params, req.query.user_id);
     //取得user_id判斷此訂單是否為該使用者輸入
     // console.log('req.session.member', req.session.member);
     if (!req.session.member) {
@@ -214,7 +221,7 @@ router.get('/detail/:order_id', async (req, res, next) => {
             [order_id]
         );
 
-        // console.log('response_userInfo', response_userInfo);
+        console.log('response_userInfo', response_userInfo);
 
         const response = response_orderListA.concat(response_orderListB);
         // console.log('response', response);
@@ -222,6 +229,20 @@ router.get('/detail/:order_id', async (req, res, next) => {
         res.json({ user_id: user_id, message: 'All Good 訂單詳細查詢', userInfo: response_userInfo, orderList: response });
     } catch (err) {
         res.status(404).json({ message: '訂單詳細查詢失敗' });
+    }
+});
+
+//訂單完成
+router.put('/detail/finish/:order_id', async (req, res, next) => {
+    console.log('訂單完成', req.params, req.body.user_id);
+    let order_id = req.params.order_id;
+    let user_id = req.body.user_id;
+    try {
+        let response = await pool.execute('UPDATE order_product SET order_state=3 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
+
+        console.log('response update order_state', response);
+    } catch (err) {
+        res.status(404).json({ message: '訂單完成失敗' });
     }
 });
 

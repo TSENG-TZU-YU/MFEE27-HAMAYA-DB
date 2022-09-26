@@ -93,7 +93,7 @@ router.delete('/', async (req, res, next) => {
     }
 });
 
-//GET查詢資料庫
+//GET查詢購物車
 router.get('/:id', async (req, res, next) => {
     // console.log('req.params', req.params);
     const user_id = req.params.id;
@@ -101,12 +101,12 @@ router.get('/:id', async (req, res, next) => {
     try {
         //product
         let [response_product] = await pool.execute(
-            `SELECT user_cart.*, product.product_id,product.name,product.price,brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
+            `SELECT user_cart.*, product.product_id,product.name,product.price, product.stock,brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
             [user_id]
         );
         //class
         let [response_class] = await pool.execute(
-            `SELECT user_cart.*, class.product_id,class.name,class.price,class.start_date,class.end_date,class_img.image_1 FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
+            `SELECT user_cart.*, class.product_id,class.name,class.price, class.stock,class.start_date,class.end_date,class_img.image_1 FROM (user_cart INNER JOIN class on class.product_id = user_cart.product_id) INNER JOIN class_img on user_cart.product_id = class_img.product_id WHERE user_id= ?`,
             [user_id]
         );
         const response = response_product.concat(response_class);
