@@ -143,12 +143,15 @@ router.post('/register', async (req, res, next) => {
         return;
     }
 
-    // 密碼要雜湊 hash  TODO:測試暫時不雜湊
+    // 密碼要雜湊 hash
     let hashedPassword = await bcrypt.hash(req.body.password, 10);
     // 資料存到資料庫
     let filename = req.file ? '/uploads/' + req.file.filename : '';
     let result = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
     console.log('insert new member', result);
+
+    //TODO:產生隨機10位 並雜湊存進資料庫
+    //寄送認證信至註冊帳號
     // 回覆前端
     res.json({ message: '註冊成功' });
 });
@@ -291,6 +294,27 @@ router.patch('/password', async (req, res, next) => {
     //儲存雜湊新密碼
     await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedNewPassword, req.session.member.id]);
     res.json({ message: '密碼修改成功' });
+});
+
+//啟用會員帳號
+// /api/auth/enable?userid=XXX&key=XXX
+router.get('/enable', async (req, res, next) => {
+    console.log(req.date);
+    const userid = req.query.userid;
+    const key = req.query.key;
+
+    let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE user_id = ?', [userid]);
+    let userkey = userkeyArr[0];
+
+    TODO://讀取儲存至 user_enable資料庫之雜湊完key
+
+    let compareResult = await bcrypt.compare(key, userkey.key);
+    console.log('com', compareResult);
+    if (!compareResult) {
+        return res.status(401).json({ message: '啟用失敗' });
+    }
+    await pool.execute('UPDATE users SET enable=1 WHERE id=?', [userid]);
+    res.json({ message: '帳號啟用成功' });
 });
 
 module.exports = router;
