@@ -278,12 +278,13 @@ router.patch('/password', async (req, res, next) => {
     let compareResult = await bcrypt.compare(req.body.password, member.password);
     console.log('com', compareResult);
     if (!compareResult) {
-        // 如果密碼不對，就回覆 401
         return res.status(401).json({ message: '舊密碼輸入錯誤' });
     }
     if (req.body.newpassword.length < 8) {
-        // 如果密碼不對，就回覆 401
         return res.status(401).json({ message: '密碼長度至少為 8' });
+    }
+    if (!(req.body.newpassword === req.body.renewpassword)) {
+        return res.status(401).json({ message: '新密碼驗證不一致' });
     }
     //雜湊新密碼
     let hashedNewPassword = await bcrypt.hash(req.body.newpassword, 10);
