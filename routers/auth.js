@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
+const nodemailer = require('nodemailer');
 
 // 可以針對這個 router 使用某些中間件
 // router.use(express.json());
@@ -86,6 +87,9 @@ router.get('/', async (req, res, next) => {
     // 更新session
     let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.session.member.email]);
     let member = members[0];
+    if (member.enable === 0) {
+        return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
+    }
     let saveMember = {
         id: member.id,
         fullName: member.name,
@@ -147,13 +151,38 @@ router.post('/register', async (req, res, next) => {
     let hashedPassword = await bcrypt.hash(req.body.password, 10);
     // 資料存到資料庫
     let filename = req.file ? '/uploads/' + req.file.filename : '';
-    let result = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
+    let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
     console.log('insert new member', result);
 
     //TODO:產生隨機10位 並雜湊存進資料庫
+    let key = Math.random().toString(36).substring(2);
+    let hashkey = await bcrypt.hash(key, 10);
+    console.log('key', key);
+    console.log('result.insertId', result.insertId);
+    console.log('hashkey', hashkey);
+    let result2 = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? );', [result.insertId, hashkey]);
     //寄送認證信至註冊帳號
+    //http://localhost:3000/enable?userid=12&key=xdxjruurpg
+    const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+            user: 'mffee27hamaya@gmail.com',
+            pass: 'cmcgsgffouiiyxbr',
+        },
+    });
+    transporter
+        .sendMail({
+            from: 'mffee27hamaya@gmail.com',
+            to: req.body.email,
+            subject: 'HAMAYA MUSIC會員啟用認證信',
+            html: `<h3>親愛的HAMAYA會員您好:<h3><h4>點選連結啟用會員↓↓</h4><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
+        })
+        .then((info) => {
+            console.log({ info });
+        })
+        .catch(console.error);
     // 回覆前端
-    res.json({ message: '註冊成功' });
+    res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
 });
 
 //登入
@@ -165,25 +194,17 @@ router.post('/login', async (req, res, next) => {
     // 確認這個 email 有沒有註冊過
     let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
     if (members.length == 0) {
-        // 這個 email 沒有註冊過，就回覆 401
-        // 如果有，回覆 401 跟錯誤訊息
-        // members 的長度 == 0 -> 沒有資料 -> 這個 email 沒有註冊過
         return res.status(401).json({ message: '帳號或密碼錯誤' });
     }
     let member = members[0];
     // // 有註冊過，就去比密碼
-    // // (X) bcrypt.hash(req.body.password) === member.password
 
-    // //暫時註解
-    // let compareResult = await bcrypt.compare(req.body.password, member.password);
-    // if (!compareResult) {
-    //     // 如果密碼不對，就回覆 401
-    //     return res.status(401).json({ message: '帳號或密碼錯誤' });
-    // }
-    // console.log(' req.body.password =', req.body.password);
-    // console.log(' member.password =', member.password);
-    // console.log(req.body.password === member.password);
-    //TODO:測試暫時跳過密碼雜湊
+    //TODO:判斷帳號是否啟用
+    if (member.enable === 0) {
+        return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
+    }
+
+    //比對密碼雜湊
     let compareResult = await bcrypt.compare(req.body.password, member.password);
     if (!compareResult) {
         return res.status(401).json({ message: '帳號或密碼錯誤' });
@@ -297,18 +318,22 @@ router.patch('/password', async (req, res, next) => {
 });
 
 //啟用會員帳號
-// /api/auth/enable?userid=XXX&key=XXX
-router.put('/enable', async (req, res, next) => {
-    console.log(req.date);
+//http://localhost:3001/api/auth/enable?userid=12&key=xdxjruurpg
+router.get('/enable', async (req, res, next) => {
+    console.log('enable member');
+    // console.log(req.data);
     const userid = req.query.userid;
     const key = req.query.key;
 
     let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE user_id = ?', [userid]);
     let userkey = userkeyArr[0];
+    // if (userkey.length == 0) {
+    //     return res.status(401).json({ message: '啟用失敗' });
+    // }
 
     //讀取儲存至 user_enable資料庫之雜湊完key
 
-    let compareResult = await bcrypt.compare(key, userkey.key);
+    let compareResult = await bcrypt.compare(key, userkey.enable_key);
     console.log('compareResult', compareResult);
     if (!compareResult) {
         return res.status(401).json({ message: '啟用失敗' });
