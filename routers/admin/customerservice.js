@@ -99,7 +99,6 @@ router.post('/orderqa/reply', async (req, res, next) => {
     res.json({ message: 'OK' });
 });
 
-
 //場地問答
 router.get('/placeqa/loading', async (req, res, next) => {
     console.log('loading placeqa');

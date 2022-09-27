@@ -154,7 +154,7 @@ router.post('/register', async (req, res, next) => {
     let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
     console.log('insert new member', result);
 
-    //TODO:產生隨機10位 並雜湊存進資料庫
+    //產生隨機10位密碼 並雜湊存進資料庫
     let key = Math.random().toString(36).substring(2);
     let hashkey = await bcrypt.hash(key, 10);
     console.log('key', key);
@@ -175,7 +175,7 @@ router.post('/register', async (req, res, next) => {
             from: 'mffee27hamaya@gmail.com',
             to: req.body.email,
             subject: 'HAMAYA MUSIC會員啟用認證信',
-            html: `<h3>親愛的HAMAYA會員您好:<h3><h4>點選連結啟用會員↓↓</h4><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
+            html: `<h2>親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
         })
         .then((info) => {
             console.log({ info });
