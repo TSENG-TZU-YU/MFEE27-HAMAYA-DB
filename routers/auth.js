@@ -108,39 +108,39 @@ router.get('/', async (req, res, next) => {
 // /api/auth/register
 // router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
 router.post('/register', registerRules, async (req, res, next) => {
-    // TODO: 要用 try-catch 把 await 程式包起來
     //表單驗證
+    const checkForm = {};
+    //姓名驗證
+    if (req.body.fullName === '') {
+        checkForm.fullName = '*請輸入姓名';
+    }
+    //email驗證
+    if (req.body.email === '') {
+        checkForm.email = '*請輸入信箱';
+    }
     const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
-    const renterros = {};
-    if (req.body.q_category == '0') {
-        return res.status(401).json({ message: '請選擇問題類型' });
+    if (req.body.email.search(emailRule) == -1) {
+        checkForm.email = '*請填寫正確 email 格式';
     }
-    if (req.body.title === '') {
-        return res.status(401).json({ message: '請填寫問題主旨' });
-    }
-    if (req.body.comment === '') {
-        return res.status(401).json({ message: '請填寫完整內容' });
-    }
-
-    // 確認資料有沒有收到
-    // console.log('register', req.body, req.file);
-    // 驗證來自前端的資料
-    const validateResult = validationResult(req);
-    console.log('validateResult', validateResult);
-    console.log('END');
-    if (!validateResult.isEmpty()) {
-        // validateResult 不是空 -> 有錯誤 -> 回覆給前端
-        return res.status(400).json({ errors: validateResult.array() });
-    }
-
-    // 檢查 email 有沒有重複 -> 不能有重複
-    // 方法1: 交給 DB: 把 email 欄位設定成 unique
-    // 方法2: 我們自己去檢查 -> 去資料撈撈看這個 email 有沒有存在 -> 可能會有 race condition
     let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
     if (members.length > 0) {
-        // 如果有，回覆 400 跟錯誤訊息
-        // members 的長度 > 0 -> 有資料 -> 這個 email 註冊過
-        return res.status(400).json({ message: '這個 email 已經註冊過' });
+        checkForm.email = '*這個 email 已經註冊過';
+        // return res.status(400).json({ message: '這個 email 已經註冊過' });
+    }
+
+    //密碼驗證
+    if (req.body.password.length < 8) {
+        checkForm.password = '*密碼長度至少為 8';
+    }
+    if (!(req.body.password === req.body.repassword)) {
+        checkForm.password = '*密碼驗證不一致';
+        // return res.status(401).json({ message: '密碼驗證不一致' });
+    }
+
+    if (Object.keys(checkForm).length != 0) {
+        console.log('date', req.body.date);
+        res.status(401).json(checkForm);
+        return;
     }
 
     // 密碼要雜湊 hash  TODO:測試暫時不雜湊
