@@ -147,7 +147,7 @@ router.post('/register', async (req, res, next) => {
     let hashedPassword = await bcrypt.hash(req.body.password, 10);
     // 資料存到資料庫
     let filename = req.file ? '/uploads/' + req.file.filename : '';
-    let result = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, req.body.password, req.body.sub]);
+    let result = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
     console.log('insert new member', result);
     // 回覆前端
     res.json({ message: '註冊成功' });
@@ -172,11 +172,11 @@ router.post('/login', async (req, res, next) => {
     // // (X) bcrypt.hash(req.body.password) === member.password
 
     // //暫時註解
-    // // let compareResult = await bcrypt.compare(req.body.password, member.password);
-    // // if (!compareResult) {
-    // //     // 如果密碼不對，就回覆 401
-    // //     return res.status(401).json({ message: '帳號或密碼錯誤' });
-    // // }
+    // let compareResult = await bcrypt.compare(req.body.password, member.password);
+    // if (!compareResult) {
+    //     // 如果密碼不對，就回覆 401
+    //     return res.status(401).json({ message: '帳號或密碼錯誤' });
+    // }
     // console.log(' req.body.password =', req.body.password);
     // console.log(' member.password =', member.password);
     // console.log(req.body.password === member.password);
@@ -265,16 +265,30 @@ router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
 //更新密碼
 // /api/auth/password
 router.patch('/password', async (req, res, next) => {
+    console.log('password', req.body);
+    //拿會員舊密碼
+    let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
+    let member = members[0];
+    console.log(member.password);
     console.log('update password');
-    if (req.body.password.length < 8) {
+    // //雜湊會員輸入舊密碼
+    // let hashedPassword = await bcrypt.hash(req.body.password, 10);
+    // console.log('hash', hashedPassword);
+    //比對雜湊舊密碼
+    let compareResult = await bcrypt.compare(req.body.password, member.password);
+    console.log('com', compareResult);
+    if (!compareResult) {
+        // 如果密碼不對，就回覆 401
+        return res.status(401).json({ message: '舊密碼輸入錯誤' });
+    }
+    if (req.body.newpassword.length < 8) {
         // 如果密碼不對，就回覆 401
         return res.status(401).json({ message: '密碼長度至少為 8' });
     }
-    if (!(req.body.password === req.body.repassword)) {
-        // 如果密碼不對，就回覆 401
-        return res.status(401).json({ message: '密碼驗證不一致' });
-    }
-    await pool.execute('UPDATE users SET password=? WHERE id=?', [req.body.password, req.session.member.id]);
+    //雜湊新密碼
+    let hashedNewPassword = await bcrypt.hash(req.body.newpassword, 10);
+    //儲存雜湊新密碼
+    await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedNewPassword, req.session.member.id]);
     res.json({ message: '密碼修改成功' });
 });
 
