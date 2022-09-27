@@ -107,7 +107,7 @@ router.get('/', async (req, res, next) => {
 //註冊
 // /api/auth/register
 // router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
-router.post('/register', registerRules, async (req, res, next) => {
+router.post('/register', async (req, res, next) => {
     //表單驗證
     const checkForm = {};
     //姓名驗證
