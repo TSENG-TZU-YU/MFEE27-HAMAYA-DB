@@ -169,27 +169,7 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-//查詢訂單
-router.get('/:id', async (req, res, next) => {
-    // console.log('查詢user_id req.params', req.params);
-    const user_id = req.params.id;
-    try {
-        let [response_product] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,product_img.image, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
-            [user_id]
-        );
-        let [response_class] = await pool.execute(
-            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
-            [user_id]
-        );
-        const response = response_product.concat(response_class);
-        // console.log(response);
 
-        res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
-    } catch (err) {
-        res.status(404).json({ message: '訂單查詢失敗' });
-    }
-});
 
 //查詢訂單詳細
 router.get('/detail/:order_id', async (req, res, next) => {
@@ -264,7 +244,7 @@ router.post('/addqa', async (req, res, next) => {
     if (req.body.comment === '') {
         return res.status(401).json({ message: '請填寫完整內容' });
     }
-
+    //新增問題
     let [result] = await pool.execute('INSERT INTO order_qna (name, user_id, order_id,q_category, title, q_content) VALUES (?, ?, ?, ?, ?, ?)', [
         req.session.member.fullName,
         req.session.member.id,
@@ -274,13 +254,16 @@ router.post('/addqa', async (req, res, next) => {
         req.body.comment,
     ]);
     console.log('insert new myOrderQA', result);
-
+    //新增問題詳細
     let result2 = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
         req.body.order_id,
         req.session.member.fullName,
         req.body.comment,
     ]);
     console.log('result2', result2);
+
+    //更新訂單是否有問題
+    let result3 = await pool.execute('UPDATE order_product SET qa=? WHERE id=?', [1, req.body.order_id]);
 
     req.app.io.emit(`customer_List`, { newMessage: true });
     res.json({ message: '收到~小編會盡快回覆您的問題!!' });
@@ -334,4 +317,25 @@ router.post('/qareply', async (req, res, next) => {
     res.json({ message: 'OK' });
 });
 
+//查詢訂單
+router.get('/:id', async (req, res, next) => {
+    // console.log('查詢user_id req.params', req.params);
+    const user_id = req.params.id;
+    try {
+        let [response_product] = await pool.execute(
+            `SELECT order_product.*, order_product_detail.category_id,product_img.image, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN product_img ON order_product_detail.product_id = product_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
+            [user_id]
+        );
+        let [response_class] = await pool.execute(
+            `SELECT order_product.*, order_product_detail.category_id,class_img.image_1, order_state.name AS order_stateName FROM (order_product JOIN order_product_detail ON order_product_detail.order_id = order_product.order_id) JOIN class_img ON order_product_detail.product_id = class_img.product_id JOIN order_state ON order_state.id = order_product.order_state WHERE order_product.user_id = ? ORDER BY order_product.create_time DESC;`,
+            [user_id]
+        );
+        const response = response_product.concat(response_class);
+        // console.log(response);
+
+        res.json({ user_id: user_id, message: 'All Good 訂單查詢', myOrder: response });
+    } catch (err) {
+        res.status(404).json({ message: '訂單查詢失敗' });
+    }
+});
 module.exports = router;

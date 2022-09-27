@@ -109,6 +109,18 @@ router.get('/', async (req, res, next) => {
 // router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
 router.post('/register', registerRules, async (req, res, next) => {
     // TODO: 要用 try-catch 把 await 程式包起來
+    //表單驗證
+    const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+    const renterros = {};
+    if (req.body.q_category == '0') {
+        return res.status(401).json({ message: '請選擇問題類型' });
+    }
+    if (req.body.title === '') {
+        return res.status(401).json({ message: '請填寫問題主旨' });
+    }
+    if (req.body.comment === '') {
+        return res.status(401).json({ message: '請填寫完整內容' });
+    }
 
     // 確認資料有沒有收到
     // console.log('register', req.body, req.file);
@@ -207,6 +219,13 @@ router.get('/logout', (req, res, next) => {
 // /api/auth/profile
 router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
     console.log('會員資料更新: id =', req.body.id, ', name =', req.body.fullName);
+    //表單驗證
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
+    if (req.body.fullName === '') {
+        return res.status(401).json({ message: '請填寫完整姓名' });
+    }
 
     let filename = req.file ? '/uploads/' + req.file.filename : req.session.member.photo;
     let result = await pool.execute('UPDATE users SET name=?, phone=?, city=?, dist=?, address=?, birthday=?, photo=?, sub=? WHERE id=?', [
