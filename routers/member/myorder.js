@@ -246,4 +246,92 @@ router.put('/detail/finish/:order_id', async (req, res, next) => {
     }
 });
 
+//新增訂單問題
+//http://localhost:3001/api/member/myorder/addqa
+router.post('/addqa', async (req, res, next) => {
+    console.log('add myOrderQA');
+    console.log(req.body);
+    //表單驗證
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
+    if (req.body.q_category == '0') {
+        return res.status(401).json({ message: '請選擇問題類型' });
+    }
+    if (req.body.title === '') {
+        return res.status(401).json({ message: '請填寫問題主旨' });
+    }
+    if (req.body.comment === '') {
+        return res.status(401).json({ message: '請填寫完整內容' });
+    }
+
+    let [result] = await pool.execute('INSERT INTO order_qna (name, user_id, order_id,q_category, title, q_content) VALUES (?, ?, ?, ?, ?, ?)', [
+        req.session.member.fullName,
+        req.session.member.id,
+        req.body.order_id,
+        req.body.q_category,
+        req.body.title,
+        req.body.comment,
+    ]);
+    console.log('insert new myOrderQA', result);
+
+    let result2 = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
+        req.body.order_id,
+        req.session.member.fullName,
+        req.body.comment,
+    ]);
+    console.log('result2', result2);
+
+    req.app.io.emit(`customer_List`, { newMessage: true });
+    res.json({ message: '收到~小編會盡快回覆您的問題!!' });
+});
+//訂單問答 詳細
+//http://localhost:3001/api/member/myorder/qadetail?orid=${data.id}
+router.get('/qadetail', async (req, res, next) => {
+    console.log('loading orderqa detail');
+    const orid = req.query.orid;
+    // console.log('orid', orid);
+    //訂單資訊
+    let [orderArray] = await pool.execute('SELECT * FROM order_product WHERE order_product.id=? ORDER BY create_time DESC', [orid]);
+    let order = orderArray[0];
+
+    //問答資訊
+    let [myOrderQADetailArray] = await pool.execute(
+        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
+        [orid]
+    );
+    let detail = myOrderQADetailArray[0];
+
+    //問答詳細
+    let [content] = await pool.execute('SELECT * FROM order_qna_detail WHERE order_id=?', [orid]);
+    // console.log({ detail, content });
+    res.json({ order, detail, content });
+});
+//訂單問答 新增回覆
+//http://localhost:3001/api//member/myorder/qareply
+router.post('/qareply', async (req, res, next) => {
+    console.log('reply orderqa');
+    console.log('data:', req.body);
+
+    //輸入內容不能為空
+    if (req.body.q_content === '') {
+        return res.status(401).json({ message: '不能為空值' });
+    }
+    //更新回覆狀態
+    const now = new Date();
+    await pool.execute('UPDATE order_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE order_id=?', ['新訊息', '未回覆', now, req.body.order_id]);
+
+    //新增對話
+    let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
+        req.body.order_id,
+        req.session.member.fullName,
+        req.body.q_content,
+    ]);
+
+    //請管理員更新資料庫
+    req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
+
+    res.json({ message: 'OK' });
+});
+
 module.exports = router;
