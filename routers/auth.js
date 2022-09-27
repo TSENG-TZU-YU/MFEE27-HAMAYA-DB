@@ -298,7 +298,7 @@ router.patch('/password', async (req, res, next) => {
 
 //啟用會員帳號
 // /api/auth/enable?userid=XXX&key=XXX
-router.get('/enable', async (req, res, next) => {
+router.put('/enable', async (req, res, next) => {
     console.log(req.date);
     const userid = req.query.userid;
     const key = req.query.key;
@@ -306,10 +306,10 @@ router.get('/enable', async (req, res, next) => {
     let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE user_id = ?', [userid]);
     let userkey = userkeyArr[0];
 
-    TODO://讀取儲存至 user_enable資料庫之雜湊完key
+    //讀取儲存至 user_enable資料庫之雜湊完key
 
     let compareResult = await bcrypt.compare(key, userkey.key);
-    console.log('com', compareResult);
+    console.log('compareResult', compareResult);
     if (!compareResult) {
         return res.status(401).json({ message: '啟用失敗' });
     }
