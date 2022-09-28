@@ -163,7 +163,8 @@ router.post('/register', async (req, res, next) => {
         console.log('hashkey', hashkey);
         let [result2] = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? );', [result.insertId, hashkey]);
         //寄送認證信至註冊帳號
-        //http://localhost:3000/enable?userid=12&key=xdxjruurpg
+        res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
+        //http://localhost:3000/enable?id=${result2.insertId}&key=${key}
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
             auth: {
@@ -208,9 +209,6 @@ router.post('/register', async (req, res, next) => {
                     </div>`,
         });
         console.log('sendemail', sendemail);
-
-        // 回覆前端
-        res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
     } catch (err) {
         console.log(err);
     }
@@ -411,7 +409,8 @@ router.post('/forgetpassword', async (req, res, next) => {
         console.log('hashkey', hashkey);
         let [result] = await pool.execute('INSERT INTO user_forget (user_id, forget_key) VALUES (?, ? );', [member.id, hashkey]);
         //寄送認證信至註冊帳號
-        //http://localhost:3000/enable?userid=12&key=xdxjruurpg
+        res.json({ message: '已寄送重設密碼連結至註冊信箱' });
+        //http://localhost:3000/forget?id=${result.insertId}&key=${key}
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
             auth: {
@@ -423,10 +422,39 @@ router.post('/forgetpassword', async (req, res, next) => {
             from: 'mffee27hamaya@gmail.com',
             to: req.body.email,
             subject: 'HAMAYA MUSIC會員重設密碼',
-            html: `<h2>親愛的HAMAYA會員您好:</h2><h3>重設密碼連結↓↓</h3><p>http://localhost:3000/forget?id=${result.insertId}&key=${key}</p>`,
+            html: `<div 
+                        style="
+                        font-family: Sans-Serif;
+                        width: 500px;
+                        height: 150px;
+                        background-color: #5b322f;
+                        text-align: center;
+                        letter-spacing: 0.1rem;
+                        padding-top: 10px;"
+                        >
+                        <h2 
+                            style="
+                            font-size: 1.7rem;
+                            color: #f2f2f2;
+                            margin: 15px 0;
+                        ">親愛的HAMAYA會員您好</h2>
+                        <a 
+                            href="http://localhost:3000/forget?id=${result.insertId}&key=${key}"
+                            title="HAMAYA會員啟用帳號連結"
+                            style="
+                            font-size: 1.5rem;
+                            text-align: center;
+                            display: block;
+                            height: 50px;
+                            background-color: #6a777a;
+                            color: #f2f2f2;
+                            text-decoration: none;
+                            line-height: 50px;
+                            font-weight: bold;
+                        ">請點選此處重設密碼</a>
+                    </div>`,
         });
         console.log('sendemail', sendemail);
-        res.json({ message: '已寄送重設密碼連結至註冊信箱' });
     } catch (err) {
         console.log(err);
     }
