@@ -78,268 +78,355 @@ const uploader = multer({
 //登入驗證
 // /api/auth
 router.get('/', async (req, res, next) => {
-    console.log('check Login');
-    console.log(req.session.member);
-    if (!req.session.member) {
-        return res.status(401).json({ message: '尚未登入' });
+    try {
+        console.log('check Login');
+        console.log(req.session.member);
+        if (!req.session.member) {
+            return res.status(401).json({ message: '尚未登入' });
+        }
+        // 更新session
+        let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.session.member.email]);
+        let member = members[0];
+        if (member.enable === 0) {
+            return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
+        }
+        let saveMember = {
+            id: member.id,
+            fullName: member.name,
+            email: member.email,
+            phone: member.phone,
+            city: member.city,
+            dist: member.dist,
+            address: member.address,
+            birthday: member.birthday,
+            photo: member.photo,
+            sub: member.sub,
+            loginDt: new Date().toISOString(),
+        };
+        req.session.member = saveMember;
+        res.json(saveMember);
+    } catch (err) {
+        console.log(err);
     }
-
-    // 更新session
-    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.session.member.email]);
-    let member = members[0];
-    if (member.enable === 0) {
-        return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
-    }
-    let saveMember = {
-        id: member.id,
-        fullName: member.name,
-        email: member.email,
-        phone: member.phone,
-        city: member.city,
-        dist: member.dist,
-        address: member.address,
-        birthday: member.birthday,
-        photo: member.photo,
-        sub: member.sub,
-        loginDt: new Date().toISOString(),
-    };
-    req.session.member = saveMember;
-
-    res.json(saveMember);
 });
 
 //註冊
 // /api/auth/register
-// router.post('/register', uploader.single('photo'), registerRules, async (req, res, next) => {
 router.post('/register', async (req, res, next) => {
-    //表單驗證
-    const checkForm = {};
-    //姓名驗證
-    if (req.body.fullName === '') {
-        checkForm.fullName = '*請輸入姓名';
-    }
-    //email驗證
-    if (req.body.email === '') {
-        checkForm.email = '*請輸入信箱';
-    }
-    const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
-    if (req.body.email.search(emailRule) == -1) {
-        checkForm.email = '*請填寫正確 email 格式';
-    }
-    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
-    if (members.length > 0) {
-        checkForm.email = '*這個 email 已經註冊過';
-        // return res.status(400).json({ message: '這個 email 已經註冊過' });
-    }
+    try {
+        //表單驗證
+        const checkForm = {};
+        //姓名驗證
+        if (req.body.fullName === '') {
+            checkForm.fullName = '*請輸入姓名';
+        }
+        //email驗證
+        if (req.body.email === '') {
+            checkForm.email = '*請輸入信箱';
+        }
+        const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+        if (req.body.email.search(emailRule) == -1) {
+            checkForm.email = '*請填寫正確 email 格式';
+        }
+        let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
+        if (members.length > 0) {
+            checkForm.email = '*這個 email 已經註冊過';
+            // return res.status(400).json({ message: '這個 email 已經註冊過' });
+        }
+        //密碼驗證
+        if (req.body.password.length < 8) {
+            checkForm.password = '*密碼長度至少為 8';
+        }
+        if (!(req.body.password === req.body.repassword)) {
+            checkForm.password = '*密碼驗證不一致';
+            // return res.status(401).json({ message: '密碼驗證不一致' });
+        }
 
-    //密碼驗證
-    if (req.body.password.length < 8) {
-        checkForm.password = '*密碼長度至少為 8';
-    }
-    if (!(req.body.password === req.body.repassword)) {
-        checkForm.password = '*密碼驗證不一致';
-        // return res.status(401).json({ message: '密碼驗證不一致' });
-    }
+        if (Object.keys(checkForm).length != 0) {
+            console.log('date', req.body.date);
+            res.status(401).json(checkForm);
+            return;
+        }
 
-    if (Object.keys(checkForm).length != 0) {
-        console.log('date', req.body.date);
-        res.status(401).json(checkForm);
-        return;
-    }
+        // 密碼要雜湊 hash
+        let hashedPassword = await bcrypt.hash(req.body.password, 10);
+        // 資料存到資料庫
+        let filename = req.file ? '/uploads/' + req.file.filename : '';
+        let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
+        console.log('insert new member', result);
 
-    // 密碼要雜湊 hash
-    let hashedPassword = await bcrypt.hash(req.body.password, 10);
-    // 資料存到資料庫
-    let filename = req.file ? '/uploads/' + req.file.filename : '';
-    let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
-    console.log('insert new member', result);
-
-    //產生隨機10位密碼 並雜湊存進資料庫
-    let key = Math.random().toString(36).substring(2);
-    let hashkey = await bcrypt.hash(key, 10);
-    console.log('key', key);
-    console.log('result.insertId', result.insertId);
-    console.log('hashkey', hashkey);
-    let result2 = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? );', [result.insertId, hashkey]);
-    //寄送認證信至註冊帳號
-    //http://localhost:3000/enable?userid=12&key=xdxjruurpg
-    const transporter = nodemailer.createTransport({
-        service: 'Gmail',
-        auth: {
-            user: 'mffee27hamaya@gmail.com',
-            pass: 'cmcgsgffouiiyxbr',
-        },
-    });
-    transporter
-        .sendMail({
+        //產生隨機10位密碼 並雜湊存進資料庫
+        let key = Math.random().toString(36).substring(2);
+        let hashkey = await bcrypt.hash(key, 10);
+        console.log('key', key);
+        console.log('result.insertId', result.insertId);
+        console.log('hashkey', hashkey);
+        let [result2] = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? );', [result.insertId, hashkey]);
+        //寄送認證信至註冊帳號
+        //http://localhost:3000/enable?userid=12&key=xdxjruurpg
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: 'mffee27hamaya@gmail.com',
+                pass: 'cmcgsgffouiiyxbr',
+            },
+        });
+        let sendemail = await transporter.sendMail({
             from: 'mffee27hamaya@gmail.com',
             to: req.body.email,
             subject: 'HAMAYA MUSIC會員啟用認證信',
-            html: `<h2>親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
-        })
-        .then((info) => {
-            console.log({ info });
-        })
-        .catch(console.error);
-    // 回覆前端
-    res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
+            html: `<h2 style="color:red; ">親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?id=${result2.insertId}&key=${key}</p>`,
+        });
+        console.log('sendemail', sendemail);
+
+        // 回覆前端
+        res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 //登入
 // /api/auth/login
 router.post('/login', async (req, res, next) => {
-    console.log('login Innnnnnnn');
-    // console.log('login', req.body);
-    // TODO: 資料驗證
-    // 確認這個 email 有沒有註冊過
-    let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
-    if (members.length == 0) {
-        return res.status(401).json({ message: '帳號或密碼錯誤' });
-    }
-    let member = members[0];
-    // // 有註冊過，就去比密碼
+    try {
+        console.log('member login');
+        // 確認這個 email 有沒有註冊過
+        let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
+        if (members.length == 0) {
+            return res.status(401).json({ message: '帳號或密碼錯誤' });
+        }
+        let member = members[0];
+        // 有註冊過，就去比密碼
 
-    //TODO:判斷帳號是否啟用
-    if (member.enable === 0) {
-        return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
-    }
+        // 判斷帳號是否啟用
+        if (member.enable === 0) {
+            return res.status(401).json({ message: '帳號未啟用請至註冊信箱點選認證信' });
+        }
 
-    //比對密碼雜湊
-    let compareResult = await bcrypt.compare(req.body.password, member.password);
-    if (!compareResult) {
-        return res.status(401).json({ message: '帳號或密碼錯誤' });
-    }
+        // 比對密碼雜湊
+        let compareResult = await bcrypt.compare(req.body.password, member.password);
+        if (!compareResult) {
+            return res.status(401).json({ message: '帳號或密碼錯誤' });
+        }
 
-    // 密碼比對成功 -> 存在 session
-    let saveMember = {
-        id: member.id,
-        fullName: member.name,
-        email: member.email,
-        phone: member.phone,
-        city: member.city,
-        dist: member.dist,
-        address: member.address,
-        birthday: member.birthday,
-        photo: member.photo,
-        sub: member.sub,
-        loginDt: new Date().toISOString(),
-    };
-    // 把資料寫進 session 裡
-    req.session.member = saveMember;
-    console.log(req.session);
-    // // 回覆前端登入成功
-    res.json(saveMember);
-    // res.json({ message: 'TESTOK' });
+        // 密碼比對成功 -> 存在 session
+        let saveMember = {
+            id: member.id,
+            fullName: member.name,
+            email: member.email,
+            phone: member.phone,
+            city: member.city,
+            dist: member.dist,
+            address: member.address,
+            birthday: member.birthday,
+            photo: member.photo,
+            sub: member.sub,
+            loginDt: new Date().toISOString(),
+        };
+        // 把資料寫進 session 裡
+        req.session.member = saveMember;
+        console.log(req.session);
+        // // 回覆前端登入成功
+        res.json(saveMember);
+        // res.json({ message: 'TESTOK' });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 //登出
 // /api/auth/logout
 router.get('/logout', (req, res, next) => {
-    req.session.member = null;
-    res.json({ message: '已登出' });
+    try {
+        req.session.member = null;
+        res.json({ message: '已登出' });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 //更新資料
 // /api/auth/profile
 router.patch('/profile', uploader.single('photo'), async (req, res, next) => {
-    console.log('會員資料更新: id =', req.body.id, ', name =', req.body.fullName);
-    //表單驗證
-    if (!req.session.member) {
-        return res.status(401).json({ message: '已登出請重新登入' });
-    }
-    if (req.body.fullName === '') {
-        return res.status(401).json({ message: '請填寫完整姓名' });
-    }
+    try {
+        console.log('會員資料更新: id =', req.body.id, ', name =', req.body.fullName);
+        //表單驗證
+        if (!req.session.member) {
+            return res.status(401).json({ message: '已登出請重新登入' });
+        }
+        if (req.body.fullName === '') {
+            return res.status(401).json({ message: '請填寫完整姓名' });
+        }
 
-    let filename = req.file ? '/uploads/' + req.file.filename : req.session.member.photo;
-    let result = await pool.execute('UPDATE users SET name=?, phone=?, city=?, dist=?, address=?, birthday=?, photo=?, sub=? WHERE id=?', [
-        req.body.fullName,
-        req.body.phone,
-        req.body.city,
-        req.body.dist,
-        req.body.address,
-        req.body.birthday,
-        filename,
-        req.body.sub,
-        req.body.id,
-    ]);
-    // console.log(result);
+        let filename = req.file ? '/uploads/' + req.file.filename : req.session.member.photo;
+        let result = await pool.execute('UPDATE users SET name=?, phone=?, city=?, dist=?, address=?, birthday=?, photo=?, sub=? WHERE id=?', [
+            req.body.fullName,
+            req.body.phone,
+            req.body.city,
+            req.body.dist,
+            req.body.address,
+            req.body.birthday,
+            filename,
+            req.body.sub,
+            req.body.id,
+        ]);
+        // console.log(result);
 
-    // 更新session
-    let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
-    let member = members[0];
-    let saveMember = {
-        id: member.id,
-        fullName: member.name,
-        email: member.email,
-        phone: member.phone,
-        city: member.city,
-        dist: member.dist,
-        address: member.address,
-        birthday: member.birthday,
-        photo: member.photo,
-        sub: member.sub,
-        loginDt: new Date().toISOString(),
-    };
-    req.session.member = saveMember;
-    res.json([saveMember, '會員資料修改成功']);
-    // res.json({ message: '新增照片成功', photo: filename });
+        // 更新session
+        let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
+        let member = members[0];
+        let saveMember = {
+            id: member.id,
+            fullName: member.name,
+            email: member.email,
+            phone: member.phone,
+            city: member.city,
+            dist: member.dist,
+            address: member.address,
+            birthday: member.birthday,
+            photo: member.photo,
+            sub: member.sub,
+            loginDt: new Date().toISOString(),
+        };
+        req.session.member = saveMember;
+        res.json([saveMember, '會員資料修改成功']);
+        // res.json({ message: '新增照片成功', photo: filename });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 //更新密碼
 // /api/auth/password
 router.patch('/password', async (req, res, next) => {
-    console.log('password', req.body);
-    //拿會員舊密碼
-    let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
-    let member = members[0];
-    console.log(member.password);
-    console.log('update password');
-    // //雜湊會員輸入舊密碼
-    // let hashedPassword = await bcrypt.hash(req.body.password, 10);
-    // console.log('hash', hashedPassword);
-    //比對雜湊舊密碼
-    let compareResult = await bcrypt.compare(req.body.password, member.password);
-    console.log('com', compareResult);
-    if (!compareResult) {
-        return res.status(401).json({ message: '舊密碼輸入錯誤' });
+    try {
+        console.log('password', req.body);
+        //拿會員舊密碼
+        let [members] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.body.id]);
+        let member = members[0];
+        console.log(member.password);
+        console.log('update password');
+        // //雜湊會員輸入舊密碼
+        // let hashedPassword = await bcrypt.hash(req.body.password, 10);
+        // console.log('hash', hashedPassword);
+        //比對雜湊舊密碼
+        let compareResult = await bcrypt.compare(req.body.password, member.password);
+        console.log('com', compareResult);
+        if (!compareResult) {
+            return res.status(401).json({ message: '舊密碼輸入錯誤' });
+        }
+        if (req.body.newpassword.length < 8) {
+            return res.status(401).json({ message: '新密碼長度至少為 8' });
+        }
+        if (!(req.body.newpassword === req.body.renewpassword)) {
+            return res.status(401).json({ message: '新密碼驗證不一致' });
+        }
+        //雜湊新密碼
+        let hashedNewPassword = await bcrypt.hash(req.body.newpassword, 10);
+        //儲存雜湊新密碼
+        await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedNewPassword, req.session.member.id]);
+        res.json({ message: '密碼修改成功' });
+    } catch (err) {
+        console.log(err);
     }
-    if (req.body.newpassword.length < 8) {
-        return res.status(401).json({ message: '密碼長度至少為 8' });
-    }
-    if (!(req.body.newpassword === req.body.renewpassword)) {
-        return res.status(401).json({ message: '新密碼驗證不一致' });
-    }
-    //雜湊新密碼
-    let hashedNewPassword = await bcrypt.hash(req.body.newpassword, 10);
-    //儲存雜湊新密碼
-    await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedNewPassword, req.session.member.id]);
-    res.json({ message: '密碼修改成功' });
 });
 
 //啟用會員帳號
 //http://localhost:3001/api/auth/enable?userid=12&key=xdxjruurpg
 router.get('/enable', async (req, res, next) => {
-    console.log('enable member');
-    // console.log(req.data);
-    const userid = req.query.userid;
-    const key = req.query.key;
+    try {
+        console.log('enable member');
+        const id = req.query.id;
+        const key = req.query.key;
+        let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE id = ?', [id]);
+        let userkey = userkeyArr[0];
 
-    let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE user_id = ?', [userid]);
-    let userkey = userkeyArr[0];
-    // if (userkey.length == 0) {
-    //     return res.status(401).json({ message: '啟用失敗' });
-    // }
-
-    //讀取儲存至 user_enable資料庫之雜湊完key
-
-    let compareResult = await bcrypt.compare(key, userkey.enable_key);
-    console.log('compareResult', compareResult);
-    if (!compareResult) {
-        return res.status(401).json({ message: '啟用失敗' });
+        //讀取儲存至 user_enable資料庫之雜湊完key
+        let compareResult = await bcrypt.compare(key, userkey.enable_key);
+        console.log('compareResult', compareResult);
+        if (!compareResult) {
+            return res.status(401).json({ message: '啟用失敗' });
+        }
+        await pool.execute('UPDATE users SET enable=1 WHERE id=?', [userkey.user_id]);
+        res.json({ message: '帳號啟用成功' });
+    } catch (err) {
+        console.log(err);
     }
-    await pool.execute('UPDATE users SET enable=1 WHERE id=?', [userid]);
-    res.json({ message: '帳號啟用成功' });
+});
+
+//忘記密碼寄送修改密碼連結
+//http://localhost:3001/api/auth/forgetpassword
+router.post('/forgetpassword', async (req, res, next) => {
+    try {
+        console.log('forgetpassword');
+        if (req.body.email === '') {
+            return res.status(401).json({ message: '請輸入註冊E-MAIL' });
+        }
+        const emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+        if (req.body.email.search(emailRule) == -1) {
+            return res.status(401).json({ message: '請填寫正確 email 格式' });
+        }
+        //檢查email 讀取使用者資料
+        let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.body.email]);
+
+        if (members.length == 0) {
+            return res.status(401).json({ message: '此帳號尚未註冊' });
+        }
+        let member = members[0];
+
+        //產生隨機10位密碼 並雜湊存進資料庫
+        let key = Math.random().toString(36).substring(2);
+        let hashkey = await bcrypt.hash(key, 10);
+        console.log('hashkey', hashkey);
+        let [result] = await pool.execute('INSERT INTO user_forget (user_id, forget_key) VALUES (?, ? );', [member.id, hashkey]);
+        //寄送認證信至註冊帳號
+        //http://localhost:3000/enable?userid=12&key=xdxjruurpg
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: 'mffee27hamaya@gmail.com',
+                pass: 'cmcgsgffouiiyxbr',
+            },
+        });
+        let sendemail = await transporter.sendMail({
+            from: 'mffee27hamaya@gmail.com',
+            to: req.body.email,
+            subject: 'HAMAYA MUSIC會員重設密碼',
+            html: `<h2>親愛的HAMAYA會員您好:</h2><h3>重設密碼連結↓↓</h3><p>http://localhost:3000/forget?id=${result.insertId}&key=${key}</p>`,
+        });
+        console.log('sendemail', sendemail);
+        res.json({ message: '已寄送重設密碼連結至註冊信箱' });
+    } catch (err) {
+        console.log(err);
+    }
+});
+//忘記密碼修改
+//http://localhost:3001/api/auth/forget?id=12&key=xdxjruurpg
+router.patch('/newpassword', async (req, res, next) => {
+    try {
+        //讀取儲存至 user_forget資料庫之雜湊完key
+        let [userkeyArr] = await pool.execute('SELECT * FROM user_forget WHERE id = ?', [req.body.id]);
+        let userkey = userkeyArr[0];
+        //比較資料庫與會員持有key是否相同
+        let compareResult = await bcrypt.compare(req.body.key, userkey.forget_key);
+        if (!compareResult) {
+            return res.status(401).json({ message: '認證失敗' });
+        }
+        if (req.body.newpassword.length < 8) {
+            return res.status(401).json({ message: '新密碼長度至少為 8' });
+        }
+        if (!(req.body.newpassword === req.body.renewpassword)) {
+            return res.status(401).json({ message: '新密碼驗證不一致' });
+        }
+        //雜湊新密碼
+        let hashedNewPassword = await bcrypt.hash(req.body.newpassword, 10);
+        //儲存雜湊新密碼
+        await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedNewPassword, userkey.user_id]);
+        res.json({ message: '密碼修改成功' });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 module.exports = router;
