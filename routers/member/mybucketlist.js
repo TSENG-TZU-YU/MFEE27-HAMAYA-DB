@@ -4,7 +4,7 @@ const pool = require('../../utils/db');
 
 // 單筆 新增收藏 POST http://localhost:3001/api/member/mybucketlist
 router.post('/', async (req, res, next) => {
-    // TODO: 要在前端包成陣列送後端
+    // 要在前端包成陣列送後端
     // data =[{
     //   user_id: , number
     //   product_id: , string

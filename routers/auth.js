@@ -175,7 +175,39 @@ router.post('/register', async (req, res, next) => {
             from: 'mffee27hamaya@gmail.com',
             to: req.body.email,
             subject: 'HAMAYA MUSIC會員啟用認證信',
-            html: `<h2>親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
+            // html: `<h2>親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
+            html: `
+            <div 
+                style="
+                font-family: Sans-Serif;
+                width: 500px;
+                height: 150px;
+                background-color: #00323d;
+                text-align: center;
+                letter-spacing: 0.1rem;
+                padding-top: 10px;"
+            >
+            <h2 
+                style="
+                font-size: 1.7rem;
+                color: #f2f2f2;
+                margin: 15px 0;
+            ">親愛的HAMAYA會員您好</h2>
+            <a 
+                href="http://localhost:3000/enable?userid=${result.insertId}&key=${key}"
+                title="HAMAYA會員啟用帳號連結"
+                style="
+                font-size: 1.5rem;
+                text-align: center;
+                display: block;
+                height: 50px;
+                background-color: #6a777a;
+                color: #f2f2f2;
+                text-decoration: none;
+                line-height: 50px;
+                font-weight: bold;
+            ">請點選此處前往啟用帳號</a>
+        </div>`,
         })
         .then((info) => {
             console.log({ info });
@@ -184,7 +216,7 @@ router.post('/register', async (req, res, next) => {
     // 回覆前端
     res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
 });
-
+// C:\Users\QQ\Documents\MFEE27-HAMAYA-BE\public\uploads\logo.svg
 //登入
 // /api/auth/login
 router.post('/login', async (req, res, next) => {
