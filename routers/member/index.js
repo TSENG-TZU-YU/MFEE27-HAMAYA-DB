@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../../utils/db');
+// const pool = require('../../utils/db');
 
-let myclassRouter = require('./myclass');
-router.use('/myclass', myclassRouter);
+let myClassRouter = require('./myclass');
+router.use('/myclass', myClassRouter);
 
 let mybucketlistRouter = require('./mybucketlist');
 router.use('/mybucketlist', mybucketlistRouter);
@@ -22,5 +22,7 @@ router.use('/myquestion', myquestionRouter);
 
 let myplaceRouter = require('./myplace');
 router.use('/myplace', myplaceRouter);
+
+
 
 module.exports = router;
