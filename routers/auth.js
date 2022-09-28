@@ -175,7 +175,6 @@ router.post('/register', async (req, res, next) => {
             from: 'mffee27hamaya@gmail.com',
             to: req.body.email,
             subject: 'HAMAYA MUSIC會員啟用認證信',
-            // html: `<h2>親愛的HAMAYA會員您好:</h2><h3>點選連結啟用帳號↓↓</h3><p>http://localhost:3000/enable?userid=${result.insertId}&key=${key}</p>`,
             html: `
             <div 
                 style="
