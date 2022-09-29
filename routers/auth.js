@@ -181,12 +181,18 @@ router.post('/register', async (req, res, next) => {
                         style="
                         font-family: Sans-Serif;
                         width: 500px;
-                        height: 150px;
+                        height: 250px;
                         background-color: #00323d;
                         text-align: center;
                         letter-spacing: 0.1rem;
                         padding-top: 10px;"
                         >
+                        <img src="https://upload.cc/i1/2022/09/29/Q1UzAD.png"
+                            style="
+                            width: 500px;
+                            align-self: center;
+                            margin: 20px 0 5px 0;"
+                            alt="HAMAYA" />
                         <h2 
                             style="
                             font-size: 1.7rem;
@@ -434,12 +440,18 @@ router.post('/forgetpassword', async (req, res, next) => {
                         style="
                         font-family: Sans-Serif;
                         width: 500px;
-                        height: 150px;
+                        height: 250px;
                         background-color: #5b322f;
                         text-align: center;
                         letter-spacing: 0.1rem;
                         padding-top: 10px;"
                         >
+                        <img src="https://upload.cc/i1/2022/09/29/Q1UzAD.png"
+                        style="
+                        width: 500px;
+                        align-self: center;
+                        margin: 20px 0 5px 0;"
+                        alt="HAMAYA" />
                         <h2 
                             style="
                             font-size: 1.7rem;

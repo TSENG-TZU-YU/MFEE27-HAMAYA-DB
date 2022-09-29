@@ -79,8 +79,11 @@ app.use('/public', express.static(path.join(__dirname, 'public')));
 let authRouter = require('./routers/auth');
 app.use('/api/auth', authRouter);
 
-let membrtRouter = require('./routers/member');
-app.use('/api/member', membrtRouter);
+let googleRouter = require('./routers/googleAuth');
+app.use('/api/googleAuth', googleRouter);
+
+let memberRouter = require('./routers/member');
+app.use('/api/member', memberRouter);
 
 let homeRouter = require('./routers/home');
 app.use('/api/home', homeRouter);
