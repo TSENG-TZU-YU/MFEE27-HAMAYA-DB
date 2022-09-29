@@ -446,7 +446,7 @@ router.post('/forgetpassword', async (req, res, next) => {
                         letter-spacing: 0.1rem;
                         padding-top: 10px;"
                         >
-                        <img src="https://upload.cc/i1/2022/09/29/Q1UzAD.png"
+                        <img src="https://upload.cc/i1/2022/09/29/8SyfzT.png"
                         style="
                         width: 500px;
                         align-self: center;
@@ -466,7 +466,7 @@ router.post('/forgetpassword', async (req, res, next) => {
                             text-align: center;
                             display: block;
                             height: 50px;
-                            background-color: #6a777a;
+                            background-color: #8E6966;
                             color: #f2f2f2;
                             text-decoration: none;
                             line-height: 50px;

@@ -15,7 +15,7 @@ router.get('/category', async (req, res) => {
 
         res.json({ categoryMain, categorySub });
     } catch (err) {
-        res.status(404).json({ err: err });
+        console.log(err);
     }
 });
 
@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
             return;
         }
     } catch (err) {
-        res.status(404).json({ err: err });
+        console.log(err);
     }
 });
 
@@ -103,7 +103,7 @@ router.get('/:productId', async (req, res) => {
         );
         res.json({ data, dataImg, relatedProducts });
     } catch (err) {
-        res.status(404).json({ err: err });
+        console.log(err);
     }
 });
 
