@@ -43,7 +43,7 @@ router.post('/', async (req, res, next) => {
                 res.json({ message: '加入收藏成功!', product: response_product, class: response_class });
             }
         } catch (err) {
-            res.status(404).json({ message: '加入收藏失敗!' });
+            console.log(err);
         }
         return;
     }
@@ -70,7 +70,7 @@ router.post('/', async (req, res, next) => {
             );
             res.json({ message: '加入收藏成功!', product: response_product, class: response_class });
         } catch (err) {
-            res.status(404).json({ message: '加入收藏失敗' });
+            console.log(err);
         }
     }
 });
@@ -97,7 +97,7 @@ router.delete('/delete', async (req, res, next) => {
             );
             res.json({ message: '取消收藏成功!', product: response_product, class: response_class });
         } catch (err) {
-            res.status(404).json({ message: '取消收藏失敗!' });
+            console.log(err);
         }
         return;
     }
@@ -119,7 +119,7 @@ router.delete('/delete', async (req, res, next) => {
             );
             res.json({ message: '取消收藏成功!', product: response_product, class: response_class });
         } catch (err) {
-            res.status(404).json({ message: '取消收藏失敗!' });
+            console.log(err);
         }
     }
 });
@@ -129,22 +129,24 @@ router.get('/:id', async (req, res, next) => {
     // console.log('查詢bucket user_id req.params', req.params);
     // SELECT * FROM `user_liked` WHERE user_id = 2
     const user_id = req.params.id;
-
-    let [response_product] = await pool.execute(
-        `SELECT user_liked.*, product.product_id, product.name, product.price,product.stock, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
-        [user_id]
-    );
-
-    let [response_class] = await pool.execute(
-        `SELECT user_liked.*, class.product_id, class.name, class.price,class.stock, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
-        [user_id]
-    );
-    const response = response_product.concat(response_class);
-    // console.log('response', response);
-    if (response) {
-        res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response, product: response_product, class: response_class });
-    } else {
-        res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
+    try {
+        let [response_product] = await pool.execute(
+            `SELECT user_liked.*, product.product_id, product.name, product.price,product.stock, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
+            [user_id]
+        );
+        let [response_class] = await pool.execute(
+            `SELECT user_liked.*, class.product_id, class.name, class.price,class.stock, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
+            [user_id]
+        );
+        const response = response_product.concat(response_class);
+        // console.log('response', response);
+        if (response) {
+            res.json({ user_id: user_id, message: 'GET 收藏 資料成功', myBucketList: response, product: response_product, class: response_class });
+        } else {
+            res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
+        }
+    } catch (err) {
+        console.log(err);
     }
 });
 
