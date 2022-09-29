@@ -56,7 +56,7 @@ router.post('/commonqa/reply', async (req, res, next) => {
 router.get('/orderqa/loading', async (req, res, next) => {
     console.log('loading orderqa');
     let [orderqa] = await pool.execute(
-        'SELECT order_qna.*, order_q_category.name AS q_category ,users.email ,users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id ORDER BY create_time DESC'
+        'SELECT order_qna.*, order_q_category.name AS q_category ,users.email ,users.phone,order_product.order_id AS order_id1 FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id JOIN order_product ON order_qna.order_id = order_product.id ORDER BY create_time DESC'
     );
     res.json(orderqa);
 });

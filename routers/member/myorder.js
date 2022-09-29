@@ -240,6 +240,17 @@ router.put('/detail/finish/:order_id', async (req, res, next) => {
     }
 });
 
+router.get('/replystate', async (req, res, next) => {
+    console.log('確認回覆狀態');
+    console.log('123', req.session);
+    let [response] = await pool.execute(
+        'SELECT order_product.*,order_qna.user_reply_state FROM order_product JOIN order_qna ON order_product.id = order_qna.order_id WHERE order_product.user_id = ? AND qa=1',
+        [req.session.member.id]
+    );
+    console.log(response);
+    res.json(response);
+});
+
 //新增訂單問題
 //http://localhost:3001/api/member/myorder/addqa
 router.post('/addqa', async (req, res, next) => {
