@@ -169,8 +169,6 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-
-
 //查詢訂單詳細
 router.get('/detail/:order_id', async (req, res, next) => {
     console.log('查詢order_id req.params', req.params, req.query.user_id);
@@ -212,6 +210,21 @@ router.get('/detail/:order_id', async (req, res, next) => {
     }
 });
 
+//訂單付款
+router.put('/detail/checkout/:order_id', async (req, res, next) => {
+    console.log('訂單前往付款', req);
+    let order_id = req.params.order_id;
+    let user_id = req.body.user_id;
+    try {
+        let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
+
+        console.log('response update order_state', response);
+        res.json({ user_id: user_id, message: '付款成功' });
+    } catch (err) {
+        res.status(404).json({ message: '訂單付款失敗' });
+    }
+});
+
 //訂單完成
 router.put('/detail/finish/:order_id', async (req, res, next) => {
     console.log('訂單完成', req.params, req.body.user_id);
@@ -221,6 +234,7 @@ router.put('/detail/finish/:order_id', async (req, res, next) => {
         let response = await pool.execute('UPDATE order_product SET order_state=3 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
 
         console.log('response update order_state', response);
+        res.json({ user_id: user_id, message: '訂單完成' });
     } catch (err) {
         res.status(404).json({ message: '訂單完成失敗' });
     }
