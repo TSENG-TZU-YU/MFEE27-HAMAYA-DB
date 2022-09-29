@@ -80,10 +80,11 @@ const uploader = multer({
 router.get('/', async (req, res, next) => {
     try {
         console.log('check Login');
-        console.log(req.session.member);
+
         if (!req.session.member) {
             return res.status(401).json({ message: '尚未登入' });
         }
+        console.log(req.session.member);
         // 更新session
         let [members] = await pool.execute('SELECT * FROM users WHERE email = ?', [req.session.member.email]);
         let member = members[0];
@@ -152,7 +153,7 @@ router.post('/register', async (req, res, next) => {
         let hashedPassword = await bcrypt.hash(req.body.password, 10);
         // 資料存到資料庫
         let filename = req.file ? '/uploads/' + req.file.filename : '';
-        let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?);', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
+        let [result] = await pool.execute('INSERT INTO users (name, email, password, sub) VALUES (?, ?, ?, ?)', [req.body.fullName, req.body.email, hashedPassword, req.body.sub]);
         console.log('insert new member', result);
 
         //產生隨機10位密碼 並雜湊存進資料庫
@@ -161,7 +162,7 @@ router.post('/register', async (req, res, next) => {
         console.log('key', key);
         console.log('result.insertId', result.insertId);
         console.log('hashkey', hashkey);
-        let [result2] = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? );', [result.insertId, hashkey]);
+        let [result2] = await pool.execute('INSERT INTO user_enable (user_id, enable_key) VALUES (?, ? )', [result.insertId, hashkey]);
         //寄送認證信至註冊帳號
         res.json({ message: '歡迎唷~!已寄送認證信至註冊信箱' });
         //http://localhost:3000/enable?id=${result2.insertId}&key=${key}
@@ -215,7 +216,7 @@ router.post('/register', async (req, res, next) => {
 });
 // C:\Users\QQ\Documents\MFEE27-HAMAYA-BE\public\uploads\logo.svg
 //登入
-// /api/auth/login
+// /api/auth/loginna
 router.post('/login', async (req, res, next) => {
     try {
         console.log('member login');
@@ -361,14 +362,20 @@ router.patch('/password', async (req, res, next) => {
 });
 
 //啟用會員帳號
-//http://localhost:3001/api/auth/enable?userid=12&key=xdxjruurpg
+//http://localhost:3001/api/auth/enable?id=12&key=xdxjruurpg
 router.get('/enable', async (req, res, next) => {
     try {
         console.log('enable member');
         const id = req.query.id;
         const key = req.query.key;
+        if (!id || !key) {
+            return res.status(401).json({ message: '啟用失敗' });
+        }
         let [userkeyArr] = await pool.execute('SELECT * FROM user_enable WHERE id = ?', [id]);
         let userkey = userkeyArr[0];
+        if (userkeyArr.length === 0) {
+            return res.status(401).json({ message: '啟用失敗' });
+        }
 
         //讀取儲存至 user_enable資料庫之雜湊完key
         let compareResult = await bcrypt.compare(key, userkey.enable_key);
@@ -377,6 +384,7 @@ router.get('/enable', async (req, res, next) => {
             return res.status(401).json({ message: '啟用失敗' });
         }
         await pool.execute('UPDATE users SET enable=1 WHERE id=?', [userkey.user_id]);
+        await pool.execute('DELETE FROM user_enable WHERE id=?', [id]);
         res.json({ message: '帳號啟用成功' });
     } catch (err) {
         console.log(err);
@@ -407,9 +415,9 @@ router.post('/forgetpassword', async (req, res, next) => {
         let key = Math.random().toString(36).substring(2);
         let hashkey = await bcrypt.hash(key, 10);
         console.log('hashkey', hashkey);
-        let [result] = await pool.execute('INSERT INTO user_forget (user_id, forget_key) VALUES (?, ? );', [member.id, hashkey]);
+        let [result] = await pool.execute('INSERT INTO user_forget (user_id, forget_key) VALUES (?, ? )', [member.id, hashkey]);
         //寄送認證信至註冊帳號
-        res.json({ message: '已寄送重設密碼連結至註冊信箱' });
+        res.json({ message: '已寄送重設密碼連結至註冊信箱，請於十分鐘內完成設定' });
         //http://localhost:3000/forget?id=${result.insertId}&key=${key}
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
@@ -455,6 +463,12 @@ router.post('/forgetpassword', async (req, res, next) => {
                     </div>`,
         });
         console.log('sendemail', sendemail);
+
+        //定時十分鐘清除啟用KEY
+        setTimeout(() => {
+            pool.execute('DELETE FROM user_forget WHERE id=?', [result.insertId]);
+            console.log('KEY已清除');
+        }, 600000);
     } catch (err) {
         console.log(err);
     }
@@ -463,8 +477,15 @@ router.post('/forgetpassword', async (req, res, next) => {
 //http://localhost:3001/api/auth/forget?id=12&key=xdxjruurpg
 router.patch('/newpassword', async (req, res, next) => {
     try {
+        if (!req.body.id || !req.body.key) {
+            return res.status(401).json({ message: '認證失敗' });
+        }
         //讀取儲存至 user_forget資料庫之雜湊完key
         let [userkeyArr] = await pool.execute('SELECT * FROM user_forget WHERE id = ?', [req.body.id]);
+        if (userkeyArr.length === 0) {
+            return res.status(401).json({ message: '認證失敗' });
+        }
+
         let userkey = userkeyArr[0];
         //比較資料庫與會員持有key是否相同
         let compareResult = await bcrypt.compare(req.body.key, userkey.forget_key);
