@@ -38,15 +38,17 @@ router.patch('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
     // 狀態還未設定道就請求了 會404 要用 session 的來抓取
     const memberId = req.session.member.id;
+    // const memberId = req.params.memberId;
+    // console.log('finishClass', finishClass);
 
     // 開課中
     let [buyClass] = await pool.execute(
-        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date > NOW() && order_product.user_id=?`,
+        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date > NOW() && order_product.user_id=? ORDER BY order_product_detail.end_date DESC`,
         [memberId]
     );
     // 已完成課程
     let [finishClass] = await pool.execute(
-        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class.ins_main_id,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date < NOW() && order_product.user_id=? && order_product_detail.valid=1 `,
+        `SELECT order_product_detail.* , order_product.user_id ,class.teacher ,class.ins_main_id,class_img.image_1 FROM order_product_detail JOIN order_product ON order_product_detail.order_id=order_product.order_id JOIN class ON order_product_detail.product_id=class.product_id JOIN class_img ON order_product_detail.product_id=class_img.product_id  WHERE  order_product_detail.category_id = 'B' && order_product_detail.end_date < NOW()  && order_product.user_id=? && order_product_detail.valid=1 ORDER BY order_product_detail.end_date DESC `,
         [memberId]
     );
     // 會員平均評價 更新
