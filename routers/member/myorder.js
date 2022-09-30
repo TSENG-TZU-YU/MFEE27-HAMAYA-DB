@@ -2,6 +2,50 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../utils/db');
 const moment = require('moment');
+const axios = require('axios');
+const Base64 = require('crypto-js/enc-base64');
+const HmacSHA256 = require('crypto-js/hmac-sha256');
+const { LINEPAY_CHANNEL_ID, LINEPAY_VERSION, LINEPAY_SITE, LINEPAY_CHANNEL_SECRET_KEY, LINEPAY_RETURN_HOST, LINEPAY_RETURN_CONFIRM_URL, LINEPAY_RETURN_CANCEL_URL } = process.env;
+
+const path = require('path');
+const multer = require('multer');
+// 圖面要存在哪裡？
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.join(__dirname, '..', '..', 'public', 'uploadsQA'));
+    },
+    // 圖片名稱
+    filename: function (req, file, cb) {
+        console.log('file', file);
+        // {
+        //   fieldname: 'photo',
+        //   originalname: 'japan04-200.jpg',
+        //   encoding: '7bit',
+        //   mimetype: 'image/jpeg'
+        // }
+        // 原始檔名: file.originalname => test.abc.png
+        const ext = file.originalname.split('.').pop();
+        // or uuid
+        // https://www.npmjs.com/package/uuid
+        cb(null, `member-${Date.now()}.${ext}`);
+    },
+});
+const uploader = multer({
+    storage: storage,
+    // 過濾圖片的種類
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/png') {
+            cb(new Error('上傳的檔案型態不接受'), false);
+        } else {
+            cb(null, true);
+        }
+    },
+    // 過濾檔案的大小
+    limits: {
+        // 1k = 1024 => 1MB = 1024 * 1024
+        fileSize: 1024 * 1024,
+    },
+});
 
 //成立訂單
 router.post('/', async (req, res, next) => {
@@ -211,19 +255,115 @@ router.get('/detail/:order_id', async (req, res, next) => {
 });
 
 //訂單付款
-router.put('/detail/checkout/:order_id', async (req, res, next) => {
-    console.log('訂單前往付款', req);
+router.post('/detail/checkout/:order_id', async (req, res, next) => {
+    // console.log('訂單前往付款', req.body);
     let order_id = req.params.order_id;
     let user_id = req.body.user_id;
     try {
-        let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
+        let orders = {};
+        let products = req.body.myOrderList.map((item) => {
+            return { name: item.name, quantity: item.amount, price: item.price };
+        });
+        let amount = req.body.myOrderList
+            .map((item) => {
+                return item.amount * item.price;
+            })
+            .reduce((prev, current) => prev + current, 0);
 
-        console.log('response update order_state', response);
-        res.json({ user_id: user_id, message: '付款成功' });
+        // console.log('product amount', products, amount);
+        //暫時不計算總價
+        let newTotalAmount = req.body.myOrderUserInfo[0].total_amount - req.body.myOrderUserInfo[0].freight + req.body.myOrderUserInfo[0].discount;
+
+        orders = {
+            amount: newTotalAmount,
+            currency: 'TWD',
+            orderId: order_id,
+            packages: [
+                {
+                    id: 'products_1',
+                    amount: amount,
+                    products: products,
+                },
+            ],
+        };
+        //request body
+        const linePayBody = {
+            ...orders,
+            redirectUrls: {
+                confirmUrl: `${LINEPAY_RETURN_HOST}${LINEPAY_RETURN_CONFIRM_URL}`,
+                cancelUrl: `${LINEPAY_RETURN_HOST}${LINEPAY_RETURN_CANCEL_URL}`,
+            },
+        };
+        //uri
+        const uri = '/payments/request';
+        //nonce
+        const { headers } = createSignature(uri, linePayBody);
+        // //發請求的路徑
+        const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
+        //對line pay請求
+        const linepayReq = await axios.post(url, linePayBody, { headers });
+        //收到回覆
+        if (linepayReq?.data?.returnCode === '0000') {
+            res.json({ web: linepayReq?.data?.info.paymentUrl.web });
+        }
+    } catch (err) {
+        console.log('err', err);
+        res.end();
+    }
+});
+//前端付款完進來
+router.get('/linepay/confirm', async (req, res, next) => {
+    // console.log(req.query);
+    try {
+        const { transactionId, orderId } = req.query;
+        let [response] = await pool.execute(
+            'SELECT order_product.user_id, order_product.total_amount,freight, coupon.discount  FROM order_product LEFT JOIN coupon ON coupon.id = order_product.coupon_id WHERE order_id=?',
+            [orderId]
+        );
+        // console.log('response select', response);
+        //
+        let amount = Number(response[0].total_amount) + Number(response[0].discount - Number(response[0].freight));
+        let user_id = response[0].user_id;
+
+        const linePayBody = {
+            amount: amount,
+            currency: 'TWD',
+        };
+
+        const uri = `/payments/${transactionId}/confirm`;
+        const { headers } = createSignature(uri, linePayBody);
+
+        const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
+        //告訴linepay交易結果
+        const linePayRes = await axios.post(url, linePayBody, { headers });
+
+        // console.log('linePayRes.data.info', linePayRes.data.info);
+
+        if (linePayRes?.data?.returnCode === '0000') {
+            let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [orderId, user_id]);
+        }
+
+        res.json({ message: '付款成功' });
     } catch (err) {
         res.status(404).json({ message: '訂單付款失敗' });
     }
 });
+//linepay重要驗證
+function createSignature(uri, linePayBody) {
+    const nonce = parseInt(new Date().getTime() / 1000);
+
+    const string = `${LINEPAY_CHANNEL_SECRET_KEY}/${LINEPAY_VERSION}${uri}${JSON.stringify(linePayBody)}${nonce}`;
+
+    const signature = Base64.stringify(HmacSHA256(string, LINEPAY_CHANNEL_SECRET_KEY));
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-LINE-ChannelId': LINEPAY_CHANNEL_ID,
+        'X-LINE-Authorization-Nonce': nonce,
+        'X-LINE-Authorization': signature,
+    };
+    return { signature, headers };
+}
 
 //訂單完成
 router.put('/detail/finish/:order_id', async (req, res, next) => {
@@ -305,7 +445,7 @@ router.get('/qadetail', async (req, res, next) => {
 
     //問答資訊
     let [myOrderQADetailArray] = await pool.execute(
-        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
+        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone ,users.photo FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
         [orid]
     );
     let detail = myOrderQADetailArray[0];
@@ -317,24 +457,33 @@ router.get('/qadetail', async (req, res, next) => {
 });
 //訂單問答 新增回覆
 //http://localhost:3001/api//member/myorder/qareply
-router.post('/qareply', async (req, res, next) => {
+router.post('/qareply', uploader.single('photo'), async (req, res, next) => {
     console.log('reply orderqa');
     console.log('data:', req.body);
 
-    //輸入內容不能為空
-    if (req.body.q_content === '') {
+    // 輸入內容不能為空
+    if (req.body.q_content === '' && req.file === undefined) {
         return res.status(401).json({ message: '不能為空值' });
     }
+
     //更新回覆狀態
     const now = new Date();
     await pool.execute('UPDATE order_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE order_id=?', ['新訊息', '未回覆', now, req.body.order_id]);
 
+    //新增圖片
+    if (req.file !== undefined) {
+        let filename = '/uploadsQA/' + req.file.filename;
+        let [photo] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [req.body.order_id, req.session.member.fullName, filename]);
+    }
+
     //新增對話
-    let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
-        req.body.order_id,
-        req.session.member.fullName,
-        req.body.q_content,
-    ]);
+    if (req.body.q_content !== '') {
+        let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
+            req.body.order_id,
+            req.session.member.fullName,
+            req.body.q_content,
+        ]);
+    }
 
     //請管理員更新資料庫
     req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
