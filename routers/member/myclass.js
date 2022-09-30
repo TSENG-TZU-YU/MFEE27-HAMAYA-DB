@@ -34,9 +34,10 @@ router.patch('/', async (req, res, next) => {
     }
 });
 // 評價 get
-// http://localhost:3001/api/member/myclass/2
-router.get('/:memberId', async (req, res, next) => {
-    const memberId = req.params.memberId;
+// http://localhost:3001/api/member/myclass
+router.get('/', async (req, res, next) => {
+    // 狀態還未設定道就請求了 會404 要用 session 的來抓取
+    const memberId = req.session.member.id;
 
     // 開課中
     let [buyClass] = await pool.execute(
