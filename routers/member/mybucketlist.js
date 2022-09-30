@@ -125,10 +125,12 @@ router.delete('/delete', async (req, res, next) => {
 });
 
 //查詢
-router.get('/:id', async (req, res, next) => {
-    // console.log('查詢bucket user_id req.params', req.params);
+router.get('/', async (req, res, next) => {
     // SELECT * FROM `user_liked` WHERE user_id = 2
-    const user_id = req.params.id;
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
+    const user_id = req.session.member.id;
     try {
         let [response_product] = await pool.execute(
             `SELECT user_liked.*, product.product_id, product.name, product.price,product.stock, product.ins_main_id, product_img.image FROM (user_liked INNER JOIN product on product.product_id = user_liked.product_id) INNER JOIN product_img on user_liked.product_id = product_img.product_id WHERE user_id = ?`,
