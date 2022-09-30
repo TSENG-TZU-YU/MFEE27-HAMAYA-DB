@@ -7,6 +7,46 @@ const Base64 = require('crypto-js/enc-base64');
 const HmacSHA256 = require('crypto-js/hmac-sha256');
 const { LINEPAY_CHANNEL_ID, LINEPAY_VERSION, LINEPAY_SITE, LINEPAY_CHANNEL_SECRET_KEY, LINEPAY_RETURN_HOST, LINEPAY_RETURN_CONFIRM_URL, LINEPAY_RETURN_CANCEL_URL } = process.env;
 
+const path = require('path');
+const multer = require('multer');
+// 圖面要存在哪裡？
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.join(__dirname, '..', '..', 'public', 'uploadsQA'));
+    },
+    // 圖片名稱
+    filename: function (req, file, cb) {
+        console.log('file', file);
+        // {
+        //   fieldname: 'photo',
+        //   originalname: 'japan04-200.jpg',
+        //   encoding: '7bit',
+        //   mimetype: 'image/jpeg'
+        // }
+        // 原始檔名: file.originalname => test.abc.png
+        const ext = file.originalname.split('.').pop();
+        // or uuid
+        // https://www.npmjs.com/package/uuid
+        cb(null, `member-${Date.now()}.${ext}`);
+    },
+});
+const uploader = multer({
+    storage: storage,
+    // 過濾圖片的種類
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/png') {
+            cb(new Error('上傳的檔案型態不接受'), false);
+        } else {
+            cb(null, true);
+        }
+    },
+    // 過濾檔案的大小
+    limits: {
+        // 1k = 1024 => 1MB = 1024 * 1024
+        fileSize: 1024 * 1024,
+    },
+});
+
 //成立訂單
 router.post('/', async (req, res, next) => {
     console.log('myorder 中間件', req.body);
@@ -405,7 +445,7 @@ router.get('/qadetail', async (req, res, next) => {
 
     //問答資訊
     let [myOrderQADetailArray] = await pool.execute(
-        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
+        'SELECT order_qna.*, order_q_category.name AS q_category, users.email, users.phone ,users.photo FROM order_qna JOIN order_q_category ON order_qna.q_category = order_q_category.id JOIN users ON order_qna.user_id = users.id WHERE order_qna.order_id=? ORDER BY create_time DESC',
         [orid]
     );
     let detail = myOrderQADetailArray[0];
@@ -417,24 +457,33 @@ router.get('/qadetail', async (req, res, next) => {
 });
 //訂單問答 新增回覆
 //http://localhost:3001/api//member/myorder/qareply
-router.post('/qareply', async (req, res, next) => {
+router.post('/qareply', uploader.single('photo'), async (req, res, next) => {
     console.log('reply orderqa');
     console.log('data:', req.body);
 
-    //輸入內容不能為空
-    if (req.body.q_content === '') {
+    // 輸入內容不能為空
+    if (req.body.q_content === '' && req.file === undefined) {
         return res.status(401).json({ message: '不能為空值' });
     }
+
     //更新回覆狀態
     const now = new Date();
     await pool.execute('UPDATE order_qna SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE order_id=?', ['新訊息', '未回覆', now, req.body.order_id]);
 
+    //新增圖片
+    if (req.file !== undefined) {
+        let filename = '/uploadsQA/' + req.file.filename;
+        let [photo] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [req.body.order_id, req.session.member.fullName, filename]);
+    }
+
     //新增對話
-    let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
-        req.body.order_id,
-        req.session.member.fullName,
-        req.body.q_content,
-    ]);
+    if (req.body.q_content !== '') {
+        let [content] = await pool.execute('INSERT INTO order_qna_detail (order_id, name, q_content) VALUES (?, ?, ?)', [
+            req.body.order_id,
+            req.session.member.fullName,
+            req.body.q_content,
+        ]);
+    }
 
     //請管理員更新資料庫
     req.app.io.emit(`userid${req.session.member.id}`, { newMessage: true });
