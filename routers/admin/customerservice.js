@@ -58,7 +58,7 @@ router.get('/commonqa/detail', async (req, res, next) => {
     const nlid = req.query.nlid;
 
     let [myQuestionDetailArray] = await pool.execute(
-        'SELECT user_qna.*, user_q_category.name AS user_q_category ,users.photo  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id JOIN users ON user_qna.user_id = users.id WHERE user_qna.id=?',
+        'SELECT user_qna.*, user_q_category.name AS user_q_category ,users.photo  FROM user_qna JOIN user_q_category ON user_qna.q_category = user_q_category.id LEFT JOIN users ON user_qna.user_id = users.id WHERE user_qna.id=?',
         [nlid]
     );
     let detail = myQuestionDetailArray[0];
@@ -169,7 +169,10 @@ router.get('/placeqa/detail', async (req, res, next) => {
     const plid = req.query.plid;
     console.log(plid);
 
-    let [myPlaceDetailArray] = await pool.execute('SELECT * FROM `venue_reservation` WHERE id=? ORDER BY create_time DESC', [plid]);
+    let [myPlaceDetailArray] = await pool.execute(
+        'SELECT venue_reservation.*, users.photo FROM venue_reservation LEFT JOIN users ON venue_reservation.user_id = users.id WHERE venue_reservation.id=? ORDER BY create_time DESC',
+        [plid]
+    );
 
     let detail = myPlaceDetailArray[0];
     console.log(detail);
@@ -182,19 +185,33 @@ router.get('/placeqa/detail', async (req, res, next) => {
 
 ////場地問答 新增回覆
 //http://localhost:3001/api/admin/customerservice/commonqa/reply
-router.post('/placeqa/reply', async (req, res, next) => {
+router.post('/placeqa/reply', uploader.single('photo'), async (req, res, next) => {
     console.log('reply placeqa');
     console.log('data:', req.body);
 
-    //輸入內容不能為空
-    if (req.body.place_content === '') {
+    // 輸入內容不能為空
+    if (req.body.place_content === '' && req.file === undefined) {
         return res.status(401).json({ message: '不能為空值' });
     }
 
-    let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [req.body.place_rt_id, '客服小編', req.body.place_content]);
-
+    //更新回覆狀態
     const now = new Date();
     await pool.execute('UPDATE venue_reservation SET manager_reply_state=?, user_reply_state=?, update_time=? WHERE id=?', ['已回覆', '未回覆', now, req.body.place_rt_id]);
+
+    //新增圖片
+    if (req.file !== undefined) {
+        let filename = '/uploadsQA/' + req.file.filename;
+        let [photo] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [req.body.place_rt_id, '客服小編', filename]);
+    }
+    //新增對話
+    if (req.body.place_content !== '') {
+        let [content] = await pool.execute('INSERT INTO venue_detail (place_rt_id, name, place_content) VALUES (?, ?, ?)', [
+            req.body.place_rt_id,
+            '客服小編',
+            req.body.place_content,
+        ]);
+    }
+
     //請會員更新資料庫
     req.app.io.emit(`userid${req.body.user_id}`, { newMessage: true });
 
