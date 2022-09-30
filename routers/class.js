@@ -10,9 +10,10 @@ router.get('/list?:category', async (req, res, next) => {
     // 使用數字 query
     const classCategory = req.query.class;
 
-    let [data] = await pool.execute(`SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE  class.ins_main_id=? && valid=1  `, [
-        classCategory,
-    ]);
+    let [data] = await pool.execute(
+        `SELECT class.*,class_img.*  FROM class JOIN class_img ON  class.product_id=class_img.product_id WHERE  class.ins_main_id=? && valid=1 && !stock=0  `,
+        [classCategory]
+    );
     let [maxPrice] = await pool.execute(`SELECT MAX(price) AS maxPrice From class WHERE valid=1 GROUP BY ins_main_id `);
 
     let [minPrice] = await pool.execute(`SELECT MIN(price) AS minPrice From class WHERE valid=1 GROUP BY ins_main_id `);

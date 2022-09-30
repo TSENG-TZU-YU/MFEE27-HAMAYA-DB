@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../utils/db');
 const moment = require('moment');
+const axios = require('axios');
+const Base64 = require('crypto-js/enc-base64');
+const HmacSHA256 = require('crypto-js/hmac-sha256');
+const { LINEPAY_CHANNEL_ID, LINEPAY_VERSION, LINEPAY_SITE, LINEPAY_CHANNEL_SECRET_KEY, LINEPAY_RETURN_HOST, LINEPAY_RETURN_CONFIRM_URL, LINEPAY_RETURN_CANCEL_URL } = process.env;
 
 const path = require('path');
 const multer = require('multer');
@@ -251,19 +255,115 @@ router.get('/detail/:order_id', async (req, res, next) => {
 });
 
 //訂單付款
-router.put('/detail/checkout/:order_id', async (req, res, next) => {
-    console.log('訂單前往付款', req);
+router.post('/detail/checkout/:order_id', async (req, res, next) => {
+    // console.log('訂單前往付款', req.body);
     let order_id = req.params.order_id;
     let user_id = req.body.user_id;
     try {
-        let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
+        let orders = {};
+        let products = req.body.myOrderList.map((item) => {
+            return { name: item.name, quantity: item.amount, price: item.price };
+        });
+        let amount = req.body.myOrderList
+            .map((item) => {
+                return item.amount * item.price;
+            })
+            .reduce((prev, current) => prev + current, 0);
 
-        console.log('response update order_state', response);
-        res.json({ user_id: user_id, message: '付款成功' });
+        // console.log('product amount', products, amount);
+        //暫時不計算總價
+        let newTotalAmount = req.body.myOrderUserInfo[0].total_amount - req.body.myOrderUserInfo[0].freight + req.body.myOrderUserInfo[0].discount;
+
+        orders = {
+            amount: newTotalAmount,
+            currency: 'TWD',
+            orderId: order_id,
+            packages: [
+                {
+                    id: 'products_1',
+                    amount: amount,
+                    products: products,
+                },
+            ],
+        };
+        //request body
+        const linePayBody = {
+            ...orders,
+            redirectUrls: {
+                confirmUrl: `${LINEPAY_RETURN_HOST}${LINEPAY_RETURN_CONFIRM_URL}`,
+                cancelUrl: `${LINEPAY_RETURN_HOST}${LINEPAY_RETURN_CANCEL_URL}`,
+            },
+        };
+        //uri
+        const uri = '/payments/request';
+        //nonce
+        const { headers } = createSignature(uri, linePayBody);
+        // //發請求的路徑
+        const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
+        //對line pay請求
+        const linepayReq = await axios.post(url, linePayBody, { headers });
+        //收到回覆
+        if (linepayReq?.data?.returnCode === '0000') {
+            res.json({ web: linepayReq?.data?.info.paymentUrl.web });
+        }
+    } catch (err) {
+        console.log('err', err);
+        res.end();
+    }
+});
+//前端付款完進來
+router.get('/linepay/confirm', async (req, res, next) => {
+    // console.log(req.query);
+    try {
+        const { transactionId, orderId } = req.query;
+        let [response] = await pool.execute(
+            'SELECT order_product.user_id, order_product.total_amount,freight, coupon.discount  FROM order_product LEFT JOIN coupon ON coupon.id = order_product.coupon_id WHERE order_id=?',
+            [orderId]
+        );
+        // console.log('response select', response);
+        //
+        let amount = Number(response[0].total_amount) + Number(response[0].discount - Number(response[0].freight));
+        let user_id = response[0].user_id;
+
+        const linePayBody = {
+            amount: amount,
+            currency: 'TWD',
+        };
+
+        const uri = `/payments/${transactionId}/confirm`;
+        const { headers } = createSignature(uri, linePayBody);
+
+        const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
+        //告訴linepay交易結果
+        const linePayRes = await axios.post(url, linePayBody, { headers });
+
+        // console.log('linePayRes.data.info', linePayRes.data.info);
+
+        if (linePayRes?.data?.returnCode === '0000') {
+            let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [orderId, user_id]);
+        }
+
+        res.json({ message: '付款成功' });
     } catch (err) {
         res.status(404).json({ message: '訂單付款失敗' });
     }
 });
+//linepay重要驗證
+function createSignature(uri, linePayBody) {
+    const nonce = parseInt(new Date().getTime() / 1000);
+
+    const string = `${LINEPAY_CHANNEL_SECRET_KEY}/${LINEPAY_VERSION}${uri}${JSON.stringify(linePayBody)}${nonce}`;
+
+    const signature = Base64.stringify(HmacSHA256(string, LINEPAY_CHANNEL_SECRET_KEY));
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-LINE-ChannelId': LINEPAY_CHANNEL_ID,
+        'X-LINE-Authorization-Nonce': nonce,
+        'X-LINE-Authorization': signature,
+    };
+    return { signature, headers };
+}
 
 //訂單完成
 router.put('/detail/finish/:order_id', async (req, res, next) => {
