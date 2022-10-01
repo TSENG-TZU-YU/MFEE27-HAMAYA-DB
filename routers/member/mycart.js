@@ -57,12 +57,9 @@ router.post('/multi', async (req, res, next) => {
 });
 
 //http://localhost:3001/api/member/mycart
-//DELETE FROM user_cart WHERE user_id=2 AND product_id=A123
 //delete會員刪除購物車內容
 router.delete('/', async (req, res, next) => {
     // console.log('取得該會員要刪除user_cart內容', req.body);
-    // const user_id = req.body.user_id;
-    // const product_id = req.body.product_id;
     //單筆
     if (req.body.length === 1) {
         const [newData] = req.body;
@@ -94,10 +91,12 @@ router.delete('/', async (req, res, next) => {
 });
 
 //GET查詢購物車
-router.get('/:id', async (req, res, next) => {
+router.get('/', async (req, res, next) => {
     // console.log('req.params', req.params);
-    const user_id = req.params.id;
-    // console.log('req.params', user_id);
+    if (!req.session.member) {
+        return res.status(401).json({ message: '已登出請重新登入' });
+    }
+    const user_id = req.session.member.id;
     try {
         //product
         let [response_product] = await pool.execute(
