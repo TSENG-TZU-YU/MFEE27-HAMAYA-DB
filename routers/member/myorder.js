@@ -9,6 +9,7 @@ const { LINEPAY_CHANNEL_ID, LINEPAY_VERSION, LINEPAY_SITE, LINEPAY_CHANNEL_SECRE
 
 const path = require('path');
 const multer = require('multer');
+const { json } = require('express');
 // 圖面要存在哪裡？
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -217,7 +218,7 @@ router.get('/detail/:order_id', async (req, res, next) => {
     try {
         //使用者資訊
         let [response_userInfo] = await pool.execute(
-            `SELECT order_product.*, coupon.name AS coupon_name,coupon.discount FROM order_product LEFT JOIN coupon ON order_product.coupon_id = coupon.id WHERE order_id= ? AND user_id = ?`,
+            `SELECT order_product.*, coupon.name AS coupon_name,coupon.discount, order_pay_method.name AS pay_method_name FROM order_product LEFT JOIN coupon ON order_product.coupon_id = coupon.id JOIN order_pay_method ON order_pay_method.id = order_product.pay_method WHERE order_id= ? AND user_id = ?`,
             [order_id, user_id]
         );
 
@@ -246,9 +247,15 @@ router.get('/detail/:order_id', async (req, res, next) => {
 
 //訂單付款
 router.post('/detail/checkout/:order_id', async (req, res, next) => {
-    // console.log('訂單前往付款', req.body);
+    console.log('訂單前往付款', req.body);
+    let pay_method = req.body.myOrderUserInfo[0].pay_method;
     let order_id = req.params.order_id;
     let user_id = req.body.user_id;
+    if (pay_method !== 3) {
+        let response = await pool.execute('UPDATE order_product SET order_state=2 WHERE order_id = ? AND user_id =?', [order_id, user_id]);
+        return res.json({ message: '付款成功' });
+    }
+
     try {
         let orders = {};
         let products = req.body.myOrderList.map((item) => {
@@ -483,7 +490,6 @@ router.post('/qareply', uploader.single('photo'), async (req, res, next) => {
 
 //查詢訂單
 router.get('/', async (req, res, next) => {
-    // console.log('查詢user_id req.params', req.params);
     if (!req.session.member) {
         return res.status(401).json({ message: '已登出請重新登入' });
     }
