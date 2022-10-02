@@ -40,7 +40,7 @@ router.post('/', async (req, res, next) => {
                     `SELECT user_liked.*, class.product_id, class.name, class.price,class.stock, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
                     [data[0].user_id]
                 );
-                res.json({ message: '加入收藏成功!', product: response_product, class: response_class });
+                res.json({ message: '成功加入收藏!', product: response_product, class: response_class });
             }
         } catch (err) {
             console.log(err);
@@ -68,7 +68,7 @@ router.post('/', async (req, res, next) => {
                 `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
                 [data[0].user_id]
             );
-            res.json({ message: '加入收藏成功!', product: response_product, class: response_class });
+            res.json({ message: '成功加入收藏!', product: response_product, class: response_class });
         } catch (err) {
             console.log(err);
         }
@@ -95,7 +95,7 @@ router.delete('/delete', async (req, res, next) => {
                 `SELECT user_liked.*, class.product_id, class.name, class.price,class.stock, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
                 [data[0].user_id]
             );
-            res.json({ message: '取消收藏成功!', product: response_product, class: response_class });
+            res.json({ message: '成功取消收藏!', product: response_product, class: response_class });
         } catch (err) {
             console.log(err);
         }
@@ -117,7 +117,7 @@ router.delete('/delete', async (req, res, next) => {
                 `SELECT user_liked.*, class.product_id, class.name, class.price, class.start_date, class.end_date, class.deadline, class.teacher, class.stock, class.ins_main_id, class_img.image_1 FROM (user_liked INNER JOIN class on class.product_id = user_liked.product_id) INNER JOIN class_img on user_liked.product_id = class_img.product_id WHERE user_id = ?`,
                 [data[0].user_id]
             );
-            res.json({ message: '取消收藏成功!', product: response_product, class: response_class });
+            res.json({ message: '成功取消收藏!', product: response_product, class: response_class });
         } catch (err) {
             console.log(err);
         }
