@@ -23,7 +23,6 @@ router.get('/category', async (req, res) => {
 // GET http://localhost:3001/api/products?mainId=null&subId=1
 router.get('/', async (req, res) => {
     try {
-        let [sales] = await pool.execute('SELECT product_id, SUM(amount) AS sales FROM order_product_detail GROUP BY product_id');
         const mainId = req.query.mainId;
         const subId = req.query.subId;
         if (mainId === 'null' && subId === 'null') {
@@ -42,7 +41,6 @@ router.get('/', async (req, res) => {
                 brand,
                 color,
                 maxPrice,
-                sales,
             });
             return;
         }
@@ -63,7 +61,6 @@ router.get('/', async (req, res) => {
                 brand,
                 color,
                 maxPrice,
-                sales,
             });
             return;
         }
@@ -84,7 +81,6 @@ router.get('/', async (req, res) => {
                 brand,
                 color,
                 maxPrice,
-                sales,
             });
             return;
         }
