@@ -4,7 +4,7 @@ const pool = require('../../utils/db');
 
 //單筆 INSERT http://localhost:3001/api/member/mycart
 router.post('/single', async (req, res, next) => {
-    // console.log('cart 中間件', req.body);
+    console.log('cart 中間件 single', req.body);
     const [data] = req.body;
     try {
         let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [data.product_id, data.user_id]);
@@ -30,26 +30,29 @@ router.post('/single', async (req, res, next) => {
 //購物車 多筆 INSERT http://localhost:3001/api/member/mycart/multi
 //INSERT 陣列處理 很重要！
 router.post('/multi', async (req, res, next) => {
-    // console.log('cart 中間件', req.body);
+    // console.log('cart 中間件 multi', req.body);
     const data = req.body;
     const user_id = data[0][0];
     //取得product_id
     let checkId = data.map((v) => {
         return v[1];
     });
+    // console.log('checkId', checkId);
     try {
         //確認商品 && user是否重複
-        checkId.forEach(async (id) => {
-            let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [id, user_id]);
+        for (let i = 0; i < checkId.length; i++) {
+            let [checkData] = await pool.execute('SELECT product_id FROM user_cart WHERE product_id = ? AND user_id = ?', [checkId[i], user_id]);
             //db沒有的商品則進行新增
+            // console.log('checkData', checkData);
             if (checkData.length === 0) {
                 let newData = data.filter((v) => {
-                    return v[1] === id;
+                    return v[1] === checkId[i];
                 });
+                console.log('newData', newData);
                 let saveItemData = await pool.query('INSERT INTO user_cart (user_id, product_id, category_id, amount) VALUES ? ', [newData]);
-                // console.log('saveItemData', saveItemData);
+                console.log('saveItemData', saveItemData);
             }
-        });
+        }
         res.json({ message: '成功加入購物車' });
     } catch (err) {
         res.status(404).json({ message: '新增失敗' });
@@ -97,7 +100,10 @@ router.get('/', async (req, res, next) => {
         return res.status(401).json({ message: '已登出請重新登入' });
     }
     const user_id = req.session.member.id;
+    console.log('user_id', user_id);
     try {
+        let [userInfo] = await pool.execute(`SELECT users.name, users.phone FROM users WHERE id=?`, [user_id]);
+        console.log('userInfo', userInfo);
         //product
         let [response_product] = await pool.execute(
             `SELECT user_cart.*, product.product_id,product.name,product.price,product.ins_main_id, product.stock, brand.name AS brand_name,product_img.image FROM (user_cart INNER JOIN product on product.product_id = user_cart.product_id) INNER JOIN product_img on user_cart.product_id = product_img.product_id  INNER JOIN brand on brand.id = product.ins_brand WHERE user_id= ?`,
@@ -112,7 +118,7 @@ router.get('/', async (req, res, next) => {
         // const response = response_class;
         // console.log('get response', response);
         if (response) {
-            res.json({ user_id: user_id, message: 'GET 購物車 資料成功', myCart: response });
+            res.json({ user_id: user_id, message: 'GET 購物車 資料成功', myCart: response, userInfo: userInfo });
         } else {
             res.json({ message: 'NOT GET 購物車資料 可能資料表為空' });
         }
